@@ -24,7 +24,7 @@ def cols(df, round_to=4):
         if pd.api.types.is_datetime64_any_dtype(s):
             out[c] = s.dt.strftime("%Y-%m").tolist()
         elif pd.api.types.is_float_dtype(s):
-            out[c] = s.round(round_to).where(s.notna(), None).tolist()
+            out[c] = [None if pd.isna(v) else round(v, round_to) for v in s]
         else:
             out[c] = s.tolist()
     return out
@@ -61,5 +61,5 @@ payload = {
     "forecast": fc,
 }
 out = ROOT / "web" / "data.json"
-out.write_text(json.dumps(payload, separators=(",", ":")))
+out.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False))
 print(f"wrote {out} ({out.stat().st_size / 1024:.0f} KB)")
