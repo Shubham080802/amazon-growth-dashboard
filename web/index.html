@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amazon Appliances Growth Dashboard</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Amazon Appliances: Growth Analysis</h1>
+    <p class="sub" id="subtitle"></p>
+  </div>
+  <div class="filters">
+    <label>From <select id="yFrom"></select></label>
+    <label>To <select id="yTo"></select></label>
+  </div>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="sales">Sales</button>
+  <button data-tab="satisfaction">Customer satisfaction</button>
+  <button data-tab="customers">Customers</button>
+  <button data-tab="forecast">Forecast</button>
+  <button data-tab="brands">Brands &amp; products</button>
+</nav>
+
+<main>
+  <div class="panel active" id="tab-overview">
+    <div class="chart wide" id="c-sales-trend"></div>
+    <div class="row">
+      <div class="chart" id="c-annual"></div>
+      <div class="chart" id="c-rating-trend"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="tab-sales">
+    <div class="chart wide" id="c-season"></div>
+    <div class="chart wide" id="c-yoy"></div>
+    <div class="chart wide" id="c-aov"></div>
+  </div>
+
+  <div class="panel" id="tab-satisfaction">
+    <div class="chart wide" id="c-mix"></div>
+    <div class="row">
+      <div class="chart" id="c-posneg"></div>
+      <div class="chart" id="c-dist"></div>
+    </div>
+    <p class="note" id="nps"></p>
+  </div>
+
+  <div class="panel" id="tab-customers">
+    <div class="chart wide" id="c-cust"></div>
+    <div class="chart wide" id="c-newshare"></div>
+  </div>
+
+  <div class="panel" id="tab-forecast">
+    <div class="controls">
+      <div class="radios" id="fcMetric">
+        <label><input type="radio" name="fm" value="sales" checked> Sales proxy ($)</label>
+        <label><input type="radio" name="fm" value="orders"> Orders</label>
+        <label><input type="radio" name="fm" value="avg_rating"> Avg rating</label>
+      </div>
+      <label class="slider">Months ahead: <b id="hLabel">12</b>
+        <input type="range" id="horizon" min="3" max="24" value="12"></label>
+    </div>
+    <div class="chart tall" id="c-forecast"></div>
+    <div class="kpis small" id="fcKpis"></div>
+    <p class="note">Model: additive damped trend + 12-month seasonality (Holt-Winters), fitted on 2012 onward and
+      precomputed in Python. Intervals widen with horizon and are indicative. Forecasts reflect review activity, not true sales.</p>
+  </div>
+
+  <div class="panel" id="tab-brands">
+    <div class="row">
+      <div class="chart tall" id="c-brands"></div>
+      <div class="chart tall" id="c-bubble"></div>
+    </div>
+    <h3>Top products by number of reviews</h3>
+    <div class="tablewrap"><table id="products"></table></div>
+  </div>
+</main>
+
+<footer>
+  Data: <a href="https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023">Amazon Reviews 2023</a> (McAuley Lab), Appliances category, 2.1M reviews.
+  <b>Sales is a proxy</b>: list price of each verified-purchase review, a lower bound on true revenue.
+  Months after Mar 2023 are excluded because collection is incomplete there.
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
