@@ -1,0 +1,19 @@
+{
+  "source": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results",
+  "published": "2026-07-30",
+  "retrieved": "2026-10-15",
+  "note": "Transcribed by hand from Amazon's Q2 2026 earnings release (Segment Information table and Financial Guidance section). Dollar figures in $ millions. The SEC company-facts feed does not include segment detail, so this file must be updated manually each quarter.",
+  "quarter": "2026-04",
+  "segments": [
+    {"name": "North America", "sales": 116177, "sales_prior": 100068, "opinc": 9123, "opinc_prior": 7517},
+    {"name": "International", "sales": 42197, "sales_prior": 36761, "opinc": 1717, "opinc_prior": 1494},
+    {"name": "AWS", "sales": 42232, "sales_prior": 30873, "opinc": 16621, "opinc_prior": 10160}
+  ],
+  "advertising": {"sales": 19809, "sales_prior": 15694},
+  "guidance": {
+    "quarter": "2026-07",
+    "sales_lo": 197000, "sales_hi": 202000, "growth_lo": 0.09, "growth_hi": 0.12,
+    "opinc_lo": 22500, "opinc_hi": 26500, "opinc_prior": 17400,
+    "note": "Excluding the impact of Prime Day in both 2025 and 2026, Q3 2026 growth would be nearly 400 basis points higher. Guidance assumes about 80 basis points of unfavourable foreign exchange."
+  }
+}
