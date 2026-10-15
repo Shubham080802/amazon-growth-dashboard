@@ -10,11 +10,15 @@ Streamlit + Plotly dashboard analysing growth of Amazon's Appliances category fr
 - **`web/`** is a static site (Plotly.js, forecasts precomputed in Python). This is what is deployed on Vercel.
 - **`app.py`** is the original Streamlit app, with live Python forecasting.
 
+## Built for decisions (web version)
+- **Executive brief:** one-sentence outlook with a likely range and confidence, an annual-target tracker (chance of hitting a target), a monthly "is this on track?" check against what the model expected, suggested Invest / Fix / Risk decisions, and a scorecard for every brand, price band and top product.
+- **Forecast lab:** pick any segment and measure, choose the horizon, see a month-by-month or running-total view with 80%/95% ranges, test scenarios (demand, price, elasticity), see what drives the change (orders vs price and mix), the seasonal pattern, a downloadable monthly plan, and how reliable the model has been.
+- How the model works and its limits: [docs/MODEL.md](docs/MODEL.md).
+
 ## Interactions in the web version
 - Click a metric card (or the headline number) to switch the main chart; use the Sales/Orders/Rating/New customers/Positive % switcher, a smoothed-average toggle and a "compare with last year" overlay; drag the range slider to zoom
 - Year range: dropdowns, quick presets (All, Last 5, Last 3, Before 2020, 2020 on) or click an annual bar to focus on one year
 - Click a brand (bar or bubble) for a drill-down panel; sort and search the product table
-- Forecast tab: choose metric, look-ahead and a what-if scenario slider
 - Click an insight to jump to the matching tab; copy a link that restores your exact view; download the selected years as CSV; light/dark theme
 
 ## Deploy the web version on Vercel
