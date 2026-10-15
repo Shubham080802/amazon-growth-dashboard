@@ -1,5 +1,7 @@
 # Amazon Appliances Growth Dashboard
 
+**Live demo:** https://amazon-growth-dashboard-swart.vercel.app
+
 Streamlit + Plotly dashboard analysing growth of Amazon's Appliances category from 2.1M public customer reviews.
 
 **Dataset:** [Amazon Reviews 2023](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) (McAuley Lab, UC San Diego), Appliances category: 2,128,605 reviews, 94,327 products, 1996-2023.
