@@ -102,7 +102,7 @@ select:focus-visible, button:focus-visible, input:focus-visible { outline: 2px s
 .tile .spark { height: 34px; margin-top: 4px; } .tile .spark svg { display: block; width: 100%; height: 100%; }
 
 /* ---------- tabs ---------- */
-.tabs { display: flex; gap: 4px; padding: 4px; margin: 0 0 16px; overflow-x: auto; width: fit-content; max-width: 100%;
+.tabs { display: flex; gap: 4px; padding: 4px; margin: 0; overflow-x: auto; width: fit-content; max-width: 100%;
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { background: none; border: 0; color: var(--ink2); font: inherit; font-weight: 600; font-size: 14px; padding: 8px 16px;
@@ -115,7 +115,7 @@ article.card { padding: 20px 20px 12px; }
 article.card header { margin-bottom: 8px; }
 article.card h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
 article.card header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.plot { height: 340px; width: 100%; } .plot.h-md { height: 380px; } .plot.h-lg { height: 420px; }
+.plot { height: 340px; width: 100%; } .plot.h-md { height: 380px; } .plot.h-lg { height: 420px; } .plot.h-xl { height: 500px; } .plot.sm { height: 260px; }
 .row-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 input[type=search] { background: var(--page); border: 1px solid var(--border); color: var(--ink); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 14px; width: 240px; max-width: 100%; }
 
@@ -151,7 +151,66 @@ footer { max-width: 1240px; margin: 0 auto; padding: 24px 20px 40px; color: var(
   .brand p, .lbl { display: none; } .brand h1 { font-size: 15px; } .range { font-size: 12px; } .actions { gap: 8px; }
   .hero-main { padding: 20px 20px 16px; } .hero-spark { margin: 0 -20px -16px; }
   .tiles, .tiles-4 { grid-template-columns: 1fr 1fr; gap: 10px; } .tile .v { font-size: 22px; }
-  .plot, .plot.h-md, .plot.h-lg { height: 300px; }
+  .plot, .plot.h-md, .plot.h-lg, .plot.sm { height: 300px; } .plot.h-xl { height: 380px; }
   input[type=range] { width: 150px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- toolbar, chips, toggles ---------- */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.presets, .togglebar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chipbtn { border: 1px solid var(--border); background: var(--surface); color: var(--ink2); border-radius: 999px; padding: 6px 12px;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
+.chipbtn:hover { color: var(--ink); border-color: var(--axis); }
+.chipbtn.on, .chipbtn[aria-pressed="true"] { background: var(--blue-soft); color: var(--c1); border-color: color-mix(in srgb, var(--c1) 45%, transparent); }
+.chipbtn.ghost { border-style: dashed; }
+.togglebar .seg { overflow-x: auto; max-width: 100%; }
+.seg button { white-space: nowrap; }
+
+/* ---------- selectable hero / tiles ---------- */
+button.tile { text-align: left; font: inherit; color: inherit; width: 100%; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+button.tile:hover, .selectable:hover { transform: translateY(-2px); }
+.selectable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.tile.sel, .selectable.sel { box-shadow: 0 0 0 2px var(--c1), var(--shadow); }
+.tile.inline { box-shadow: none; }
+.tiles.inline { margin-bottom: 8px; }
+.insights h2 { display: flex; justify-content: space-between; align-items: baseline; }
+.insights h2 small { font-size: 11.5px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.insights li.go { cursor: pointer; margin: 0 -10px; padding: 12px 10px; border-radius: 10px; position: relative; transition: background .15s; }
+.insights li.go:hover { background: var(--page); }
+.insights li.go::after { content: "›"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 20px; }
+.insights li.go div { padding-right: 18px; }
+
+/* ---------- motion ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.panel.active > * { animation: rise .4s ease both; }
+.panel.active > *:nth-child(2) { animation-delay: .05s; } .panel.active > *:nth-child(3) { animation-delay: .1s; }
+.panel.active > *:nth-child(4) { animation-delay: .15s; } .panel.active > *:nth-child(5) { animation-delay: .2s; }
+.hero, .tiles { animation: rise .5s ease both; } .tiles { animation-delay: .08s; }
+[hidden] { display: none !important; }
+
+/* ---------- table sorting ---------- */
+th.sortable { cursor: pointer; user-select: none; } th.sortable:hover { color: var(--ink); }
+th.sorted { color: var(--ink); }
+
+/* ---------- forecast scenario ---------- */
+#whatifWrap input { width: 160px; }
+.chipbtn.small { padding: 3px 9px; font-size: 12px; }
+
+/* ---------- toast ---------- */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  box-shadow: var(--shadow); transition: opacity .2s, transform .2s; z-index: 50; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.clickable .nsewdrag { cursor: pointer !important; }
+
+/* ---------- small-screen containment ---------- */
+.panel > *, .grid2 > *, .card, .row-head > div { min-width: 0; max-width: 100%; }
+.slider { flex-wrap: wrap; }
+.togglebar .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+@media (max-width: 700px) {
+  .togglebar { width: 100%; }
+  .controls-card { gap: 14px; } .slider { width: 100%; } .slider input[type=range] { flex: 1; min-width: 120px; width: auto; }
+  #whatifWrap input { width: auto; }
+  .tablewrap { margin: 0 -20px -12px; }
+}
