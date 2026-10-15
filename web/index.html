@@ -45,6 +45,7 @@
 
 <main class="wrap">
 
+  <div id="perfTop">
   <section class="hero">
     <div class="hero-main card selectable" id="hero" data-metric="sales" role="button" tabindex="0" aria-label="Show sales in the main chart"></div>
     <aside class="insights card" aria-label="Key insights">
@@ -54,14 +55,16 @@
   </section>
 
   <section class="tiles" id="tiles" aria-label="Key metrics"></section>
+  </div>
 
   <div class="toolbar">
     <nav class="tabs" id="tabs" role="tablist">
-      <button role="tab" data-tab="overview" class="active">Overview</button>
+      <button role="tab" data-tab="brief" class="active">Executive brief</button>
+      <button role="tab" data-tab="lab">Forecast lab</button>
+      <button role="tab" data-tab="overview">Performance</button>
       <button role="tab" data-tab="sales">Sales</button>
       <button role="tab" data-tab="satisfaction">Satisfaction</button>
       <button role="tab" data-tab="customers">Customers</button>
-      <button role="tab" data-tab="forecast">Forecast</button>
       <button role="tab" data-tab="brands">Brands &amp; products</button>
     </nav>
     <div class="presets" id="presets" role="group" aria-label="Quick year ranges">
@@ -74,7 +77,7 @@
     </div>
   </div>
 
-  <div class="panel active" id="tab-overview">
+  <div class="panel" id="tab-overview">
     <article class="card">
       <header class="row-head">
         <div><h3 id="trendTitle">Sales proxy over time</h3><p>Hover for values. Drag on the chart or use the slider underneath to zoom; double-click to reset.</p></div>
@@ -155,27 +158,129 @@
     </article>
   </div>
 
-  <div class="panel" id="tab-forecast">
-    <article class="card controls-card">
-      <div class="seg" id="fcMetric" role="radiogroup" aria-label="Forecast metric">
-        <button type="button" role="radio" data-m="sales" class="on" aria-checked="true">Sales</button>
-        <button type="button" role="radio" data-m="orders" aria-checked="false">Orders</button>
-        <button type="button" role="radio" data-m="avg_rating" aria-checked="false">Avg rating</button>
-      </div>
-      <label class="slider">Look ahead <b id="hLabel">12 months</b>
-        <input type="range" id="horizon" min="3" max="24" value="12" aria-label="Months ahead">
-      </label>
-      <label class="slider" id="whatifWrap">What if growth is <b id="wLabel">as modelled</b>
-        <input type="range" id="whatif" min="-30" max="30" step="5" value="0" aria-label="Scenario adjustment in percent">
-        <button type="button" class="chipbtn" id="whatifReset">Reset</button>
-      </label>
-    </article>
-    <div class="tiles tiles-4" id="fcTiles"></div>
+  <div class="panel active" id="tab-brief">
+    <section class="verdict card" id="verdict"></section>
+
+    <div class="grid2">
+      <article class="card">
+        <header class="row-head">
+          <div><h3>Is this month on track?</h3><p id="pulseSub">Latest month vs what the model expected.</p></div>
+          <div class="seg" id="pulseSeg" role="radiogroup" aria-label="Pulse metric">
+            <button type="button" role="radio" data-m="sales" class="on">Sales</button>
+            <button type="button" role="radio" data-m="orders">Orders</button>
+            <button type="button" role="radio" data-m="rating">Rating</button>
+          </div>
+        </header>
+        <div id="pulseStat"></div>
+        <div class="plot sm" id="c-pulse"></div>
+      </article>
+      <article class="card">
+        <header><h3>Where to look this month</h3><p id="alertSub">Segments outside the range the model expected.</p></header>
+        <div id="alerts"></div>
+      </article>
+    </div>
+
+    <section>
+      <h2 class="sect">Decisions to consider</h2>
+      <div class="decisions" id="decisions"></div>
+    </section>
+
     <article class="card">
-      <header><h3 id="fcTitle">Forecast</h3><p>Shaded band is the 95% interval. The dotted line shows how the model would have done over the last 12 months. Use the scenario slider to test a better or worse outlook.</p></header>
-      <div class="plot h-lg" id="c-forecast"></div>
+      <header class="row-head">
+        <div><h3>Segment scorecard</h3><p>Every brand, price band and top product on one page. Click a row to open it in the Forecast lab.</p></div>
+        <div class="presets" id="scFilter" role="group" aria-label="Segment type">
+          <button type="button" class="chipbtn on" data-k="all">All</button>
+          <button type="button" class="chipbtn" data-k="brand">Brands</button>
+          <button type="button" class="chipbtn" data-k="band">Price bands</button>
+          <button type="button" class="chipbtn" data-k="product">Products</button>
+        </div>
+      </header>
+      <details class="rules">
+        <summary>Decision rules <span>(change the thresholds to match your risk appetite)</span></summary>
+        <div class="rules-grid">
+          <label class="slider">Chance of growth needed to invest <b id="ruleInvestL">70%</b>
+            <input type="range" id="ruleInvest" min="50" max="90" step="5" value="70"></label>
+          <label class="slider">Chance of decline that flags a risk <b id="ruleRiskL">70%</b>
+            <input type="range" id="ruleRisk" min="50" max="90" step="5" value="70"></label>
+          <label class="slider">Rating floor <b id="ruleFloorL">4.0 ★</b>
+            <input type="range" id="ruleFloor" min="3.5" max="4.5" step="0.1" value="4.0"></label>
+        </div>
+        <p class="note">Invest: likely to grow and satisfaction is healthy. Fix: growing, but the rating is low or falling. Risk: likely to shrink. Watch: no clear signal. “Tentative” means the model has been inaccurate for that segment.</p>
+      </details>
+      <div class="tablewrap"><table id="scorecard"></table></div>
     </article>
-    <p class="note">Model: additive damped trend with 12-month seasonality (Holt-Winters), fitted on 2012 onward and precomputed in Python. Intervals widen with horizon and are indicative. The scenario slider simply scales the forecast up or down; it is not a second model. The forecast reflects review activity, not true sales.</p>
+  </div>
+
+  <div class="panel" id="tab-lab">
+    <article class="card lab-controls">
+      <div class="lab-row">
+        <label class="field">Segment <select id="labSeg"></select></label>
+        <div class="field"><span class="fl">Measure</span>
+          <div class="seg" id="labMetric" role="radiogroup" aria-label="Measure">
+            <button type="button" role="radio" data-m="sales" class="on">Sales</button>
+            <button type="button" role="radio" data-m="orders">Orders</button>
+            <button type="button" role="radio" data-m="rating">Rating</button>
+          </div></div>
+        <label class="field slider">Look ahead <b id="labHLabel">12 months</b>
+          <input type="range" id="labH" min="3" max="24" value="12" aria-label="Months ahead"></label>
+      </div>
+      <div class="lab-row">
+        <div class="field"><span class="fl">View</span>
+          <div class="seg" id="labView"><button type="button" data-v="monthly" class="on">Month by month</button><button type="button" data-v="cum">Running total</button></div></div>
+        <div class="field"><span class="fl">Range shown</span>
+          <div class="seg" id="labBand"><button type="button" data-b="80" class="on">Likely (80%)</button><button type="button" data-b="95">Wide (95%)</button></div></div>
+        <label class="field">Target for the period <input id="labTarget" type="text" inputmode="decimal" aria-label="Target" placeholder="e.g. 18000000"></label>
+      </div>
+      <details class="scenario" id="scenarioBox">
+        <summary>Scenario levers <span id="scenarioTag"></span></summary>
+        <div class="rules-grid">
+          <label class="slider">Demand shift <b id="lDemandL">0%</b>
+            <input type="range" id="lDemand" min="-30" max="30" step="1" value="0"></label>
+          <label class="slider">Price change <b id="lPriceL">0%</b>
+            <input type="range" id="lPrice" min="-20" max="20" step="1" value="0"></label>
+          <label class="slider">Price elasticity <small>(assumption)</small> <b id="lElastL">−1.5</b>
+            <input type="range" id="lElast" min="-3" max="0" step="0.1" value="-1.5"></label>
+        </div>
+        <p class="note" id="scenarioNote"></p>
+        <button type="button" class="chipbtn small" id="scenarioReset">Reset scenario</button>
+      </details>
+    </article>
+
+    <div class="tiles tiles-4" id="labTiles"></div>
+
+    <article class="card">
+      <header><h3 id="labTitle">Forecast</h3><p id="labSub"></p></header>
+      <div class="plot h-lg" id="c-lab"></div>
+    </article>
+
+    <div class="grid2">
+      <article class="card"><header><h3>What drives the change</h3><p id="bridgeSub"></p></header><div class="plot" id="c-bridge"></div></article>
+      <article class="card"><header><h3>Seasonal pattern</h3><p id="seasSub"></p></header><div class="plot" id="c-seas"></div></article>
+    </div>
+
+    <article class="card">
+      <header class="row-head"><div><h3>Monthly plan</h3><p>Numbers to plan against: expected, a low case and a high case for each month.</p></div>
+        <button type="button" class="chipbtn ghost" id="planCsv">⬇ CSV</button></header>
+      <div class="tablewrap"><table id="plan"></table></div>
+    </article>
+
+    <article class="card">
+      <header><h3>Can we trust this forecast?</h3><p id="trustSub"></p></header>
+      <div class="trust-grid" id="trust"></div>
+      <div class="plot sm" id="c-monitor"></div>
+    </article>
+
+    <article class="card method">
+      <header><h3>How the model works</h3></header>
+      <ul>
+        <li><b>Model choice.</b> For every segment we try four exponential-smoothing models (level, damped trend, seasonality, trend + seasonality) and keep the one that forecasts best when tested on data it has not seen (three rolling backtests, 12 months each).</li>
+        <li><b>Proportional scale.</b> Volumes are modelled on a log scale, so a 10% miss means the same for a small brand and for the whole category.</li>
+        <li><b>Probabilities, not just a line.</b> We simulate 1,000 possible futures from the model’s own past errors. Ranges and “chance of hitting target” come from those futures.</li>
+        <li><b>Calibration.</b> Ranges are stretched or tightened until they would have contained the real outcome about 8 times in 10 in the backtests.</li>
+        <li><b>Scenarios.</b> The levers rescale the forecast: sales ×(1+demand)×(1+price)^(1+elasticity). Elasticity is an assumption you set, not something measured in this data.</li>
+        <li><b>Limits.</b> The data is Amazon review activity, a proxy for sales. Months after Mar 2023 are excluded (incomplete collection). New products with under 36 months of history are not forecast.</li>
+      </ul>
+    </article>
   </div>
 
   <div class="panel" id="tab-brands">
@@ -220,5 +325,6 @@
 </footer>
 
 <script src="app.js"></script>
+<script src="lab.js"></script>
 </body>
 </html>
