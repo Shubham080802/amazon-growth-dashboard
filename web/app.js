@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const isDark = () => matchMedia("(prefers-color-scheme: dark)").matches
   ? document.documentElement.dataset.theme !== "light" : document.documentElement.dataset.theme === "dark";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmt = {
@@ -11,6 +12,7 @@ const fmt = {
   usdC: (v) => (v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? "$" + (v / 1e3).toFixed(0) + "K" : "$" + v.toFixed(0)),
   intC: (v) => (v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(1) + "K" : String(Math.round(v))),
   pct: (v, d = 1) => (v * 100).toFixed(d) + "%",
+  rating: (v) => v.toFixed(2) + " ★",
   month: (m) => MONTHS[+m.slice(5, 7) - 1] + " " + m.slice(0, 4),
 };
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -21,8 +23,21 @@ const monOf = (m) => +m.slice(5, 7);
 const ok = (v) => Number.isFinite(v);
 const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 
-let D, M;
-const state = { from: 2012, to: 2023, fcMetric: "sales", horizon: 12, search: "" };
+// metric catalogue for the main trend chart
+const METRICS = {
+  sales: { label: "Sales proxy", f: fmt.usdC, fn: "usdC", tick: "$", tf: ".2~s", win: 12, hov: "%{y:$,.0f}", zero: true },
+  orders: { label: "Orders", f: fmt.intC, fn: "intC", tick: "", tf: ".2~s", win: 12, hov: "%{y:,.0f}", zero: true },
+  avg_rating: { label: "Average rating", f: fmt.rating, fn: "rating", tick: "", tf: ".1f", win: 6, hov: "%{y:.2f} ★", zero: false },
+  new_customers: { label: "New customers", f: fmt.intC, fn: "intC", tick: "", tf: ".2~s", win: 12, hov: "%{y:,.0f}", zero: true },
+  pct_positive: { label: "Positive reviews", f: (v) => fmt.pct(v), fn: "pct", tick: "", tf: ".0%", win: 6, hov: "%{y:.1%}", zero: false },
+};
+const FM = { usdC: fmt.usdC, intC: fmt.intC, int: fmt.int, rating: fmt.rating, pct: (v) => fmt.pct(v) };
+
+let D, M, YEARS;
+const state = {
+  tab: "overview", from: 2012, to: 2023, metric: "sales", ma: true, cmp: false,
+  fcMetric: "sales", horizon: 12, whatif: 0, search: "", sortKey: "orders", sortDir: -1, brand: null,
+};
 
 // ---------------------------------------------------------------- plotly base
 function layout(extra = {}) {
@@ -35,9 +50,10 @@ function layout(extra = {}) {
     xaxis: { ...ax, showgrid: false, showline: true },
     yaxis: { ...ax, showline: false },
     hovermode: "x unified",
-    hoverlabel: { bgcolor: css("--surface"), bordercolor: css("--axis"), font: { color: css("--ink"), size: 12.5 } },
+    hoverlabel: { bgcolor: css("--surface"), bordercolor: css("--axis"), font: { color: css("--ink"), size: 12.5 }, namelength: -1 },
     legend: { orientation: "h", x: 0, y: 1.12, font: { color: css("--ink2"), size: 12.5 }, bgcolor: "rgba(0,0,0,0)" },
     bargap: 0.38, dragmode: "zoom",
+    transition: { duration: reduceMotion ? 0 : 350, easing: "cubic-in-out" },
   };
   for (const k of Object.keys(extra)) {
     l[k] = (extra[k] && typeof extra[k] === "object" && !Array.isArray(extra[k]) && l[k]) ? { ...l[k], ...extra[k] } : extra[k];
@@ -46,8 +62,10 @@ function layout(extra = {}) {
 }
 const draw = (id, traces, lay) =>
   Plotly.react(id, traces, lay, { displayModeBar: false, responsive: true, scrollZoom: false });
+// attach a plotly event handler exactly once per chart element
+function onceOn(id, evt, fn) { const el = $(id); if (!el._bound) el._bound = {}; if (!el._bound[evt]) { el._bound[evt] = 1; el.on(evt, fn); } }
 const line = (color, w = 2) => ({ color, width: w, shape: "spline", smoothing: 0.4 });
-const dot = (x, y, color, name = "") => ({ x: [x], y: [y], mode: "markers", showlegend: false, hoverinfo: "skip", name,
+const dot = (x, y, color) => ({ x: [x], y: [y], mode: "markers", showlegend: false, hoverinfo: "skip",
   marker: { size: 10, color, line: { color: css("--surface"), width: 2 } } });
 
 // ---------------------------------------------------------------- data helpers
@@ -65,7 +83,6 @@ function yoy(f, key, how = "sum") {
 
 // ---------------------------------------------------------------- small UI parts
 const ARROW = { up: "▲", down: "▼", flat: "–" };
-function chip(text, dir) { return `<span class="chip ${dir}"><span aria-hidden="true">${ARROW[dir]}</span>${text}</span>`; }
 function deltaChip(value, textFn, goodWhenUp = true) {
   if (!ok(value)) return `<span class="chip flat">${ARROW.flat} n/a</span>`;
   const dir = Math.abs(value) < 1e-9 ? "flat" : value > 0 ? "up" : "down";
@@ -75,21 +92,41 @@ function deltaChip(value, textFn, goodWhenUp = true) {
 const pctTxt = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%";
 const numTxt = (d, p = 2) => (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(p) + d;
 
-function sparkline(values, { w = 160, h = 34, pad = 4, fill = true, color = css("--c1") } = {}) {
+function sparkline(values, { w = 160, h = 34, pad = 4, color = css("--c1") } = {}) {
   const v = values.filter(ok); if (v.length < 2) return "";
   const lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
   const pts = v.map((y, i) => [pad + (i / (v.length - 1)) * (w - 2 * pad), h - pad - ((y - lo) / span) * (h - 2 * pad)]);
   const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
   const last = pts.at(-1);
-  const area = fill ? `<path d="${d} L${last[0]} ${h} L${pts[0][0]} ${h} Z" fill="${rgba(color.startsWith("#") ? color : "#2a78d6", 0.10)}"/>` : "";
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="trend">${area}
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-    </svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="trend">
+    <path d="${d} L${last[0]} ${h} L${pts[0][0]} ${h} Z" fill="${rgba(color, 0.10)}"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
-function tile({ label, value, delta, sub, spark }) {
-  return `<div class="tile"><div class="l">${label}</div><div class="v">${value}</div>
-    <div class="sub">${delta || ""}${sub ? `<span>${sub}</span>` : ""}</div>${spark ? `<div class="spark">${spark}</div>` : ""}</div>`;
+// value shown with a count-up when it changes; key identifies the element across re-renders
+const lastVals = {};
+function counter(key, value, fn) {
+  return `<span data-count="${value}" data-fn="${fn}" data-key="${key}">${FM[fn](value)}</span>`;
+}
+function runCounters(root = document) {
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    const to = +el.dataset.count, key = el.dataset.key, fn = FM[el.dataset.fn];
+    const from = lastVals[key] ?? 0; lastVals[key] = to;
+    if (reduceMotion || from === to || !ok(to)) return;
+    const t0 = performance.now(), dur = 650;
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fn(from + (to - from) * e);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function tile({ label, value, delta, sub, spark, metric, key }) {
+  const tag = metric ? "button" : "div", attrs = metric ? ` type="button" data-metric="${metric}" aria-label="Show ${label} in the main chart"` : "";
+  return `<${tag} class="tile${metric && metric === state.metric ? " sel" : ""}"${attrs}><div class="l">${label}</div><div class="v">${value}</div>
+    <div class="sub">${delta || ""}${sub ? `<span>${sub}</span>` : ""}</div>${spark ? `<div class="spark">${spark}</div>` : ""}</${tag}>`;
 }
 
 // ---------------------------------------------------------------- hero, tiles, insights
@@ -103,49 +140,48 @@ const icon = (k) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"
 
 function renderHero(f) {
   const s = yoy(f, "sales");
-  const series = f.slice(-36).map((r) => r.sales);
+  $("hero").classList.toggle("sel", state.metric === "sales");
   $("hero").innerHTML = `
     <div>
       <div class="hero-label">Sales proxy, last 12 months</div>
-      <div class="hero-value">${ok(s.cur) ? fmt.usdC(s.cur) : "–"}</div>
+      <div class="hero-value">${ok(s.cur) ? counter("hero", s.cur, "usdC") : "–"}</div>
       <div class="hero-row">${s.ok ? deltaChip(s.g, pctTxt) : ""}<span>${s.ok ? "vs the 12 months before" : "select 2+ years for a comparison"} · ${fmt.month(f.at(-1).month)} is the latest month</span></div>
     </div>
-    <div class="hero-spark">${sparkline(series, { w: 600, h: 96, pad: 6 })}</div>`;
+    <div class="hero-spark">${sparkline(f.slice(-36).map((r) => r.sales), { w: 600, h: 96, pad: 6 })}</div>`;
 }
 
 function renderTiles(f) {
   const o = yoy(f, "orders"), r = yoy(f, "avg_rating", "mean"), n = yoy(f, "new_customers"), p = yoy(f, "pct_positive", "mean");
-  const last24 = f.slice(-24);
+  const l24 = f.slice(-24);
   $("tiles").innerHTML = [
-    tile({ label: "Orders (reviews)", value: fmt.int(o.cur), delta: deltaChip(o.g, pctTxt), sub: "vs prior 12 mo", spark: sparkline(last24.map((x) => x.orders)) }),
-    tile({ label: "Average rating", value: ok(r.cur) ? r.cur.toFixed(2) + " ★" : "–", delta: deltaChip(r.diff, numTxt("", 2)), sub: "vs prior 12 mo", spark: sparkline(last24.map((x) => x.avg_rating)) }),
-    tile({ label: "New customers", value: fmt.int(n.cur), delta: deltaChip(n.g, pctTxt), sub: "vs prior 12 mo", spark: sparkline(last24.map((x) => x.new_customers)) }),
-    tile({ label: "Positive reviews (4–5★)", value: ok(p.cur) ? fmt.pct(p.cur) : "–", delta: deltaChip(p.diff * 100, numTxt(" pts", 1)), sub: "vs prior 12 mo", spark: sparkline(last24.map((x) => x.pct_positive)) }),
+    tile({ metric: "orders", label: "Orders (reviews)", value: counter("t-orders", o.cur, "int"), delta: deltaChip(o.g, pctTxt), sub: "vs prior 12 mo", spark: sparkline(l24.map((x) => x.orders)) }),
+    tile({ metric: "avg_rating", label: "Average rating", value: ok(r.cur) ? counter("t-rating", r.cur, "rating") : "–", delta: deltaChip(r.diff, numTxt("", 2)), sub: "vs prior 12 mo", spark: sparkline(l24.map((x) => x.avg_rating)) }),
+    tile({ metric: "new_customers", label: "New customers", value: counter("t-new", n.cur, "int"), delta: deltaChip(n.g, pctTxt), sub: "vs prior 12 mo", spark: sparkline(l24.map((x) => x.new_customers)) }),
+    tile({ metric: "pct_positive", label: "Positive reviews (4–5★)", value: ok(p.cur) ? counter("t-pos", p.cur, "pct") : "–", delta: deltaChip(p.diff * 100, numTxt(" pts", 1)), sub: "vs prior 12 mo", spark: sparkline(l24.map((x) => x.pct_positive)) }),
   ].join("");
 }
 
 function renderInsights(f) {
   const items = [];
   const peak = f.reduce((a, b) => (b.sales > a.sales ? b : a), f[0]);
-  items.push(["peak", "Best month", `${fmt.month(peak.month)} led all months with ${fmt.usdC(peak.sales)} in sales proxy.`]);
+  items.push(["peak", "sales", "Best month", `${fmt.month(peak.month)} led all months with ${fmt.usdC(peak.sales)} in sales proxy.`]);
 
   const years = [...new Set(f.map((r) => yearOf(r.month)))].filter((y) => f.filter((r) => yearOf(r.month) === y).length === 12);
   const tot = (y) => sum(f.filter((r) => yearOf(r.month) === y).map((r) => r.sales));
   const growth = years.filter((y) => years.includes(y - 1) && tot(y - 1) > 0.2 * Math.max(...years.map(tot))).map((y) => [y, tot(y) / tot(y - 1) - 1]);
   if (growth.length) {
     const [by, bg] = growth.reduce((a, b) => (b[1] > a[1] ? b : a));
-    items.push(["grow", "Fastest growth", `${by} grew ${pctTxt(bg).replace("+", "")} to ${fmt.usdC(tot(by))}, the strongest year in this range.`]);
+    items.push(["grow", "overview", "Fastest growth", `${by} grew ${pctTxt(bg).replace("+", "")} to ${fmt.usdC(tot(by))}, the strongest year in this range.`]);
   }
-
   const r = yoy(f, "avg_rating", "mean"), neg = yoy(f, "pct_negative", "mean");
-  if (r.ok) items.push(["star", "Satisfaction", `Average rating is ${r.cur.toFixed(2)}, ${r.diff >= 0 ? "up" : "down"} ${Math.abs(r.diff).toFixed(2)} on last year. ${fmt.pct(neg.cur)} of reviews are 1–2★.`]);
+  if (r.ok) items.push(["star", "satisfaction", "Satisfaction", `Average rating is ${r.cur.toFixed(2)}, ${r.diff >= 0 ? "up" : "down"} ${Math.abs(r.diff).toFixed(2)} on last year. ${fmt.pct(neg.cur)} of reviews are 1–2★.`]);
 
-  const fc = D.forecast.sales, h = 12;
-  const next = sum(fc.forecast.mean.slice(0, h)), prev = sum(fc.history.value.slice(-12));
-  items.push(["next", "Outlook", `The model expects ${fmt.usdC(next)} over the next 12 months, ${pctTxt(next / prev - 1)} vs the last 12.`]);
+  const fc = D.forecast.sales;
+  const next = sum(fc.forecast.mean.slice(0, 12)), prev = sum(fc.history.value.slice(-12));
+  items.push(["next", "forecast", "Outlook", `The model expects ${fmt.usdC(next)} over the next 12 months, ${pctTxt(next / prev - 1)} vs the last 12.`]);
 
-  $("insights").innerHTML = items.map(([ic, t, body]) =>
-    `<li><span class="ins-ic">${icon(ic)}</span><div><b>${t}</b><span class="t">${body}</span></div></li>`).join("");
+  $("insights").innerHTML = items.map(([ic, tab, t, body]) =>
+    `<li class="go" data-go="${tab}" tabindex="0" role="button"><span class="ins-ic">${icon(ic)}</span><div><b>${t}</b><span class="t">${body}</span></div></li>`).join("");
 }
 
 // ---------------------------------------------------------------- tabs
@@ -155,29 +191,41 @@ function seqBlue(i, n) { // lighter -> darker blue ramp for ordered series
 }
 
 function renderOverview(f) {
-  const x = f.map((r) => r.month), sales = f.map((r) => r.sales), avg = rolling(sales, 12);
-  const peak = f.reduce((a, b) => (b.sales > a.sales ? b : a), f[0]);
-  draw("c-sales-trend", [
-    { x, y: sales, type: "scatter", mode: "lines", name: "Monthly", line: { color: rgba(css("--c1"), 0.55), width: 1.5 }, fill: "tozeroy", fillcolor: rgba(css("--c1"), 0.10), hovertemplate: "%{y:$,.0f}" },
-    { x, y: avg, type: "scatter", mode: "lines", name: "12-month average", line: line(css("--c1"), 2.5), hovertemplate: "%{y:$,.0f}" },
-    dot(peak.month, peak.sales, css("--c2"), "Peak"),
-  ], layout({
-    margin: { l: 8, r: 24, t: 28, b: 8 }, yaxis: { tickprefix: "$", tickformat: ".2~s", rangemode: "tozero" },
-    annotations: [{ x: peak.month, y: peak.sales, text: `Peak ${fmt.usdC(peak.sales)}`, showarrow: false, yshift: 18, font: { color: css("--ink"), size: 12 } }],
+  const mt = METRICS[state.metric], key = state.metric;
+  const x = f.map((r) => r.month), y = f.map((r) => r[key]);
+  $("trendTitle").textContent = `${mt.label} over time`;
+  const peak = f.reduce((a, b) => (b[key] > a[key] ? b : a), f[0]);
+  const traces = [
+    { x, y, type: "scatter", mode: "lines", name: "Monthly", line: { color: rgba(css("--c1"), state.ma ? 0.5 : 0.95), width: state.ma ? 1.5 : 2.2 }, fill: "tozeroy", fillcolor: rgba(css("--c1"), 0.10), hovertemplate: mt.hov },
+  ];
+  if (state.ma) traces.push({ x, y: rolling(y, mt.win), type: "scatter", mode: "lines", name: `${mt.win}-month average`, line: line(css("--c1"), 2.6), hovertemplate: mt.hov });
+  if (state.cmp && y.length > 12) traces.push({ x: x.slice(12), y: y.slice(0, -12), type: "scatter", mode: "lines", name: "Same month last year", line: { color: css("--muted"), width: 1.8, dash: "dot" }, hovertemplate: mt.hov });
+  traces.push(dot(peak.month, peak[key], css("--c2")));
+  draw("c-sales-trend", traces, layout({
+    margin: { l: 8, r: 24, t: 28, b: 8 },
+    xaxis: { rangeslider: { visible: true, thickness: 0.08, bgcolor: css("--page"), bordercolor: css("--border"), borderwidth: 1 } },
+    yaxis: { tickprefix: mt.tick, tickformat: mt.tf, rangemode: mt.zero ? "tozero" : "normal" },
+    annotations: [{ x: peak.month, y: peak[key], text: `Peak ${mt.f(peak[key])}`, showarrow: false, yshift: 18, font: { color: css("--ink"), size: 12 } }],
   }));
 
-  const years = [...new Set(f.map((r) => yearOf(r.month)))];
-  const part = (y) => f.filter((r) => yearOf(r.month) === y).length;
-  const ann = years.map((y) => sum(f.filter((r) => yearOf(r.month) === y).map((r) => r.sales)));
-  const lbl = ann.map((v, i) => (i && part(years[i]) === 12 && part(years[i - 1]) === 12 ? pctTxt(v / ann[i - 1] - 1) : ""));
-  draw("c-annual", [{ x: years.map((y) => (part(y) < 12 ? `${y} YTD` : String(y))), y: ann, type: "bar",
-    marker: { color: years.map((_, i) => (i === years.length - 1 ? css("--c1") : rgba(css("--c1"), 0.38))), cornerradius: 4 },
-    text: lbl, textposition: "outside", textfont: { color: css("--ink2"), size: 12 }, cliponaxis: false,
+  // annual bars always show every year; years inside the selected range are emphasised
+  const all = YEARS, part = (yr) => M.filter((r) => yearOf(r.month) === yr).length;
+  const ann = all.map((yr) => sum(M.filter((r) => yearOf(r.month) === yr).map((r) => r.sales)));
+  const lbl = ann.map((v, i) => (i && part(all[i]) === 12 && part(all[i - 1]) === 12 ? pctTxt(v / ann[i - 1] - 1) : ""));
+  const sel = (yr) => yr >= state.from && yr <= state.to;
+  draw("c-annual", [{ x: all.map((yr) => (part(yr) < 12 ? `${yr} YTD` : String(yr))), y: ann, type: "bar",
+    marker: { color: all.map((yr) => (sel(yr) ? css("--c1") : rgba(css("--c1"), 0.22))), cornerradius: 4 },
+    text: lbl, textposition: "outside", textfont: { color: css("--ink2"), size: 11.5 }, cliponaxis: false,
     hovertemplate: "%{x}: %{y:$,.0f}<extra></extra>" }],
-    layout({ hovermode: "closest", margin: { l: 8, r: 8, t: 24, b: 8 }, xaxis: { type: "category" }, yaxis: { tickprefix: "$", tickformat: ".2~s", range: [0, Math.max(...ann) * 1.18] } }));
+    layout({ hovermode: "closest", margin: { l: 8, r: 8, t: 24, b: 8 }, xaxis: { type: "category", tickangle: 0 }, yaxis: { tickprefix: "$", tickformat: ".2~s", range: [0, Math.max(...ann) * 1.18] } }));
+  onceOn("c-annual", "plotly_click", (d) => {
+    const yr = parseInt(d.points[0].x);
+    const same = state.from === yr && state.to === yr;
+    setRange(same ? YEARS[0] : yr, same ? YEARS.at(-1) : yr);
+    toast(same ? "Showing all years" : `Focused on ${yr}`);
+  });
 
-  const rt = rolling(f.map((r) => r.avg_rating), 6);
-  const lo = Math.min(...rt), hi = Math.max(...rt);
+  const rt = rolling(f.map((r) => r.avg_rating), 6), lo = Math.min(...rt), hi = Math.max(...rt);
   draw("c-rating-trend", [
     { x, y: rt, mode: "lines", name: "Avg rating", line: line(css("--c1"), 2.5), hovertemplate: "%{y:.2f} ★" },
     dot(x.at(-1), rt.at(-1), css("--c1")),
@@ -186,7 +234,7 @@ function renderOverview(f) {
 
 function renderSales(f) {
   const years = [...new Set(f.map((r) => yearOf(r.month)))];
-  const z = years.map((y) => MONTHS.map((_, i) => f.find((r) => yearOf(r.month) === y && monOf(r.month) === i + 1)?.sales ?? null));
+  const z = years.map((yr) => MONTHS.map((_, i) => f.find((r) => yearOf(r.month) === yr && monOf(r.month) === i + 1)?.sales ?? null));
   const scale = isDark() ? [[0, "#0d366b"], [0.5, "#2a78d6"], [1, "#cde2fb"]] : [[0, "#cde2fb"], [0.5, "#3987e5"], [1, "#0d366b"]];
   draw("c-heat", [{ type: "heatmap", x: MONTHS, y: years.map(String), z, colorscale: scale, xgap: 2, ygap: 2, hoverongaps: false,
     colorbar: { thickness: 10, len: 0.9, tickprefix: "$", tickformat: ".2~s", tickfont: { color: css("--muted"), size: 11 }, outlinewidth: 0 },
@@ -194,17 +242,16 @@ function renderSales(f) {
     layout({ hovermode: "closest", margin: { l: 8, r: 8, t: 8, b: 8 }, xaxis: { showline: false, side: "top" }, yaxis: { type: "category", autorange: "reversed" } }));
 
   const ys = years.slice(-6);
-  draw("c-season", ys.map((y, i) => {
-    const d = f.filter((r) => yearOf(r.month) === y), latest = i === ys.length - 1;
-    return { x: d.map((r) => monOf(r.month)), y: d.map((r) => r.sales), name: String(y), mode: "lines", line: line(seqBlue(i, ys.length), latest ? 3 : 1.8), hovertemplate: "%{y:$,.0f}" };
+  draw("c-season", ys.map((yr, i) => {
+    const d = f.filter((r) => yearOf(r.month) === yr), latest = i === ys.length - 1;
+    return { x: d.map((r) => monOf(r.month)), y: d.map((r) => r.sales), name: String(yr), mode: "lines", line: line(seqBlue(i, ys.length), latest ? 3 : 1.8), hovertemplate: "%{y:$,.0f}" };
   }), layout({ margin: { l: 8, r: 8, t: 28, b: 8 }, xaxis: { tickmode: "array", tickvals: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], ticktext: MONTHS.map((m) => m[0]), showline: true }, yaxis: { tickprefix: "$", tickformat: ".2~s" } }));
 
   const x = f.map((r) => r.month);
   draw("c-aov", [{ x, y: f.map((r) => (r.orders ? r.sales / r.orders : null)), mode: "lines", name: "Avg order value", line: line(css("--c2"), 2.5), hovertemplate: "%{y:$.2f}" }],
     layout({ showlegend: false, margin: { l: 8, r: 8, t: 12, b: 8 }, yaxis: { tickprefix: "$", tickformat: ".0f" } }));
 
-  const sales = f.map((r) => r.sales);
-  const g = sales.map((v, i) => (i >= 12 ? v / sales[i - 12] - 1 : null));
+  const sales = f.map((r) => r.sales), g = sales.map((v, i) => (i >= 12 ? v / sales[i - 12] - 1 : null));
   draw("c-yoy", [{ x, y: g, type: "bar", name: "YoY", marker: { color: g.map((v) => (v >= 0 ? css("--c1") : "#e34948")), cornerradius: 3 }, hovertemplate: "%{y:+.1%}" }],
     layout({ showlegend: false, bargap: 0.25, margin: { l: 8, r: 8, t: 12, b: 8 }, yaxis: { tickformat: ".0%" } }));
 }
@@ -233,13 +280,12 @@ function renderSatisfaction(f) {
 
   const nps = (a) => mean(a.map((r) => r.pct_positive - r.pct_negative)) * 100;
   const cur = nps(f.slice(-12)), prev = nps(f.slice(-24, -12));
-  const five = yoy(f, "pct_positive", "mean");
   const lastMix = mix.filter((r) => months.slice(-12).includes(r.month));
   const shareOf = (k) => sum(lastMix.filter((r) => r.rating === k).map((r) => r.n)) / sum(lastMix.map((r) => r.n));
   $("satTiles").innerHTML = [
     tile({ label: "Net satisfaction score", value: (cur >= 0 ? "+" : "") + cur.toFixed(0), delta: deltaChip(cur - prev, numTxt(" pts", 0)), sub: "positive% − negative%", spark: sparkline(f.slice(-24).map((r) => r.pct_positive - r.pct_negative)) }),
-    tile({ label: "5★ share, last 12 mo", value: fmt.pct(shareOf(5), 0), sub: "of all reviews", delta: "" }),
-    tile({ label: "1★ share, last 12 mo", value: fmt.pct(shareOf(1), 0), sub: "of all reviews", delta: "" }),
+    tile({ label: "5★ share, last 12 mo", value: fmt.pct(shareOf(5), 0), sub: "of all reviews" }),
+    tile({ label: "1★ share, last 12 mo", value: fmt.pct(shareOf(1), 0), sub: "of all reviews" }),
   ].join("");
 }
 
@@ -249,8 +295,7 @@ function renderCustomers(f) {
     { x, y: f.map((r) => r.new_customers), type: "bar", name: "New customers", marker: { color: css("--c1") }, hovertemplate: "%{y:,}" },
     { x, y: ret, type: "bar", name: "Returning customers", marker: { color: seqBlue(0, 6) }, hovertemplate: "%{y:,}" },
   ], layout({ barmode: "stack", bargap: 0.18, margin: { l: 8, r: 8, t: 28, b: 8 }, yaxis: { tickformat: ".2~s" } }));
-  const share = rolling(f.map((r) => r.new_customers / r.customers), 6);
-  draw("c-newshare", [{ x, y: share, mode: "lines", name: "New share", line: line(css("--c4"), 2.5), hovertemplate: "%{y:.1%}" }],
+  draw("c-newshare", [{ x, y: rolling(f.map((r) => r.new_customers / r.customers), 6), mode: "lines", name: "New share", line: line(css("--c4"), 2.5), hovertemplate: "%{y:.1%}" }],
     layout({ showlegend: false, margin: { l: 8, r: 8, t: 12, b: 8 }, yaxis: { tickformat: ".0%", range: [0.8, 1] } }));
 
   const last = f.slice(-12), prev = f.slice(-24, -12);
@@ -258,30 +303,33 @@ function renderCustomers(f) {
   const newShare = sum(last.map((r) => r.new_customers)) / act;
   $("custTiles").innerHTML = [
     tile({ label: "Active customer-months", value: fmt.int(act), delta: deltaChip(act / actP - 1, pctTxt), sub: "vs prior 12 mo", spark: sparkline(f.slice(-24).map((r) => r.customers)) }),
-    tile({ label: "First-time share", value: fmt.pct(newShare), sub: "of active customers", delta: "" }),
-    tile({ label: "Returning share", value: fmt.pct(1 - newShare), sub: "reviewed before", delta: "" }),
+    tile({ label: "First-time share", value: fmt.pct(newShare), sub: "of active customers" }),
+    tile({ label: "Returning share", value: fmt.pct(1 - newShare), sub: "reviewed before" }),
   ].join("");
 }
 
 function renderForecast() {
   const m = state.fcMetric, h = state.horizon, fc = D.forecast[m];
-  const fx = fc.forecast.month.slice(0, h), mu = fc.forecast.mean.slice(0, h), lo = fc.forecast.lo.slice(0, h), hi = fc.forecast.hi.slice(0, h);
+  const mult = m === "avg_rating" ? 1 : 1 + state.whatif / 100;   // scenarios don't apply to a 1-5 rating
+  $("whatifWrap").style.display = m === "avg_rating" ? "none" : "";
+  const sc = (a) => a.slice(0, h).map((v) => v * mult);
+  const fx = fc.forecast.month.slice(0, h), mu = sc(fc.forecast.mean), lo = sc(fc.forecast.lo), hi = sc(fc.forecast.hi);
   const name = { sales: "Sales proxy", orders: "Orders", avg_rating: "Average rating" }[m];
   const hov = m === "sales" ? "%{y:$,.0f}" : m === "orders" ? "%{y:,.0f}" : "%{y:.2f}";
-  $("fcTitle").textContent = `${name}: next ${h} months`;
-  const lastActual = fc.history.month.at(-1), lastVal = fc.history.value.at(-1);
-  const rangeStart = "2017-01";
+  const scen = state.whatif !== 0 && m !== "avg_rating";
+  $("fcTitle").textContent = `${name}: next ${h} months${scen ? ` (scenario ${state.whatif > 0 ? "+" : "−"}${Math.abs(state.whatif)}%)` : ""}`;
+  const lastActual = fc.history.month.at(-1);
   draw("c-forecast", [
     { x: fc.history.month, y: fc.history.value, name: "Actual", mode: "lines", line: line(css("--c1"), 2.5), hovertemplate: hov },
     { x: fx, y: hi, mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
     { x: fx, y: lo, mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: rgba(css("--c2"), 0.14), name: "95% interval", hoverinfo: "skip" },
-    { x: fx, y: mu, name: "Forecast", mode: "lines", line: { color: css("--c2"), width: 2.5, dash: "dash" }, hovertemplate: hov },
+    { x: fx, y: mu, name: scen ? "Forecast (scenario)" : "Forecast", mode: "lines", line: { color: css("--c2"), width: 2.5, dash: "dash" }, hovertemplate: hov },
     { x: fc.backtest.month, y: fc.backtest.value, name: "Backtest", mode: "lines", line: { color: css("--muted"), width: 1.8, dash: "dot" }, hovertemplate: hov },
     dot(fx.at(-1), mu.at(-1), css("--c2")),
   ], layout({
     margin: { l: 8, r: 24, t: 28, b: 8 },
-    xaxis: { range: [rangeStart, fx.at(-1)], showspikes: true, spikemode: "across", spikecolor: css("--axis"), spikethickness: 1, spikedash: "solid" },
-    yaxis: { tickprefix: m === "sales" ? "$" : "", tickformat: m === "avg_rating" ? ".1f" : ".2s", rangemode: m === "avg_rating" ? "normal" : "tozero" },
+    xaxis: { range: ["2017-01", fx.at(-1)], showspikes: true, spikemode: "across", spikecolor: css("--axis"), spikethickness: 1, spikedash: "solid" },
+    yaxis: { tickprefix: m === "sales" ? "$" : "", tickformat: m === "avg_rating" ? ".1f" : ".2~s", rangemode: m === "avg_rating" ? "normal" : "tozero" },
     shapes: [{ type: "line", xref: "x", yref: "paper", x0: lastActual, x1: lastActual, y0: 0, y1: 1, line: { color: css("--axis"), width: 1, dash: "dot" } }],
     annotations: [{ x: lastActual, y: 1, yref: "paper", text: "Forecast starts", showarrow: false, xanchor: "left", xshift: 6, yshift: -4, font: { color: css("--muted"), size: 11.5 } }],
   }));
@@ -289,89 +337,217 @@ function renderForecast() {
   const total = m === "avg_rating" ? mean(mu) : sum(mu), prevT = m === "avg_rating" ? mean(fc.history.value.slice(-h)) : sum(fc.history.value.slice(-h));
   const f = (v) => (m === "sales" ? fmt.usdC(v) : m === "orders" ? fmt.intC(v) : v.toFixed(2) + " ★");
   const quality = fc.mape < 0.05 ? "Very accurate" : fc.mape < 0.15 ? "Good" : fc.mape < 0.3 ? "Moderate" : "Low";
-  const endW = (hi.at(-1) - lo.at(-1)) / 2;
   $("fcTiles").innerHTML = [
     tile({ label: m === "avg_rating" ? `Avg rating, next ${h} mo` : `Projected total, next ${h} mo`, value: f(total), delta: deltaChip(total / prevT - 1, pctTxt), sub: `vs last ${h} mo` }),
-    tile({ label: "Forecast at the end", value: f(mu.at(-1)), sub: `${fmt.month(fx.at(-1))} · monthly`, delta: "" }),
-    tile({ label: "Backtest error (MAPE)", value: fmt.pct(fc.mape), sub: `${quality} · last 12 months`, delta: "" }),
-    tile({ label: "Uncertainty at the end", value: "± " + f(endW), sub: "95% interval half-width", delta: "" }),
+    tile({ label: "Forecast at the end", value: f(mu.at(-1)), sub: `${fmt.month(fx.at(-1))} · monthly` }),
+    tile({ label: "Backtest error (MAPE)", value: fmt.pct(fc.mape), sub: `${quality} · last 12 months` }),
+    tile({ label: "Uncertainty at the end", value: "± " + f((hi.at(-1) - lo.at(-1)) / 2), sub: "95% interval half-width" }),
   ].join("");
 }
 
-function renderBrands() {
-  const bm = rows(D.brand_monthly).filter(inRange), agg = {};
+function brandAgg(bm) {
+  const agg = {};
   bm.forEach((r) => { const a = (agg[r.brand] ||= { orders: 0, sales: 0, rs: 0 }); a.orders += r.orders; a.sales += r.sales; a.rs += r.rating_sum; });
-  const top = Object.entries(agg).sort((a, b) => b[1].sales - a[1].sales).slice(0, 12);
-  const rev = [...top].reverse();
+  return agg;
+}
+
+function renderBrands() {
+  const bm = rows(D.brand_monthly).filter(inRange), agg = brandAgg(bm);
+  const top = Object.entries(agg).sort((a, b) => b[1].sales - a[1].sales).slice(0, 12), rev = [...top].reverse();
+  const picked = state.brand;
   draw("c-brands", [{ y: rev.map((t) => t[0]), x: rev.map((t) => t[1].sales), type: "bar", orientation: "h",
-    marker: { color: css("--c1"), cornerradius: 4 }, text: rev.map((t) => fmt.usdC(t[1].sales)), textposition: "outside", textfont: { color: css("--ink2"), size: 12 }, cliponaxis: false,
+    marker: { color: rev.map((t) => (!picked || t[0] === picked ? css("--c1") : rgba(css("--c1"), 0.28))), cornerradius: 4 },
+    text: rev.map((t) => fmt.usdC(t[1].sales)), textposition: "outside", textfont: { color: css("--ink2"), size: 12 }, cliponaxis: false,
     hovertemplate: "%{y}: %{x:$,.0f}<extra></extra>" }],
     layout({ hovermode: "closest", bargap: 0.3, margin: { l: 8, r: 56, t: 8, b: 8 }, xaxis: { showgrid: true, tickprefix: "$", tickformat: ".2~s", showline: false }, yaxis: { showgrid: false, automargin: true } }));
+  onceOn("c-brands", "plotly_click", (d) => setBrand(d.points[0].y));
 
   const maxS = Math.max(...top.map((t) => t[1].sales));
   draw("c-bubble", [{ x: top.map((t) => t[1].orders), y: top.map((t) => t[1].rs / t[1].orders), text: top.map((t) => t[0]), mode: "markers+text", textposition: "top center",
-    textfont: { color: css("--ink2"), size: 11 }, marker: { size: top.map((t) => 12 + (t[1].sales / maxS) * 34), color: rgba(css("--c1"), 0.6), line: { color: css("--surface"), width: 2 } },
+    textfont: { color: css("--ink2"), size: 11 },
+    marker: { size: top.map((t) => 12 + (t[1].sales / maxS) * 34), color: top.map((t) => (!picked || t[0] === picked ? rgba(css("--c1"), 0.7) : rgba(css("--c1"), 0.2))), line: { color: css("--surface"), width: 2 } },
     hovertemplate: "%{text}<br>%{x:,} reviews · %{y:.2f} ★<extra></extra>" }],
     layout({ hovermode: "closest", showlegend: false, margin: { l: 8, r: 16, t: 16, b: 8 },
       xaxis: { type: "log", title: { text: "Reviews (log scale)", font: { color: css("--muted"), size: 12 } }, showgrid: true, showline: true },
       yaxis: { title: { text: "Average rating", font: { color: css("--muted"), size: 12 } }, tickformat: ".1f" } }));
+  onceOn("c-bubble", "plotly_click", (d) => setBrand(d.points[0].text));
+
+  renderBrandDetail(bm, agg);
   renderTable();
 }
 
+function setBrand(b) {
+  state.brand = state.brand === b ? null : b;
+  renderBrands(); syncUI();
+  if (state.brand) $("brandDetail").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+}
+
+function renderBrandDetail(bm, agg) {
+  const box = $("brandDetail"), b = state.brand;
+  box.hidden = !b || !agg[b];
+  if (box.hidden) return;
+  $("brandName").textContent = b;
+  const mine = bm.filter((r) => r.brand === b).sort((a, c) => a.month.localeCompare(c.month));
+  const a = agg[b], totalSales = sum(Object.values(agg).map((v) => v.sales));
+  $("brandTiles").innerHTML = [
+    tile({ label: "Sales proxy", value: fmt.usdC(a.sales), sub: "selected years" }),
+    tile({ label: "Reviews", value: fmt.int(a.orders), sub: "selected years" }),
+    tile({ label: "Average rating", value: fmt.rating(a.rs / a.orders), sub: "weighted by reviews" }),
+    tile({ label: "Share of top-25 brands", value: fmt.pct(a.sales / totalSales), sub: "by sales proxy" }),
+  ].join("");
+  const x = mine.map((r) => r.month);
+  draw("c-brand-sales", [{ x, y: mine.map((r) => r.sales), mode: "lines", name: "Sales proxy", line: line(css("--c1"), 2.2), fill: "tozeroy", fillcolor: rgba(css("--c1"), 0.10), hovertemplate: "%{y:$,.0f}" }],
+    layout({ showlegend: false, margin: { l: 8, r: 8, t: 22, b: 8 }, title: { text: "Monthly sales proxy", x: 0.01, font: { size: 13, color: css("--ink2") } }, yaxis: { tickprefix: "$", tickformat: ".2~s", rangemode: "tozero" } }));
+  draw("c-brand-rating", [{ x, y: rolling(mine.map((r) => r.rating_sum / r.orders), 6), mode: "lines", name: "Rating", line: line(css("--c2"), 2.2), hovertemplate: "%{y:.2f} ★" }],
+    layout({ showlegend: false, margin: { l: 8, r: 8, t: 22, b: 8 }, title: { text: "Average rating (6-month smoothed)", x: 0.01, font: { size: 13, color: css("--ink2") } }, yaxis: { tickformat: ".1f" } }));
+}
+
+const COLS = [["title", "Product", false], ["brand", "Brand", false], ["price", "Price", true], ["orders", "Reviews", true], ["sales", "Sales proxy", true], ["avg_rating", "Rating", true]];
 function renderTable() {
-  const q = state.search.trim().toLowerCase();
+  const q = state.search.trim().toLowerCase(), k = state.sortKey, dir = state.sortDir;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const p = rows(D.products).filter((r) => !q || (r.title + " " + r.brand).toLowerCase().includes(q));
-  $("products").innerHTML = `<thead><tr><th>Product</th><th>Brand</th><th class="n">Price</th><th class="n">Reviews</th><th class="n">Sales proxy</th><th class="n">Rating</th></tr></thead><tbody>` +
+  const p = rows(D.products).filter((r) => !q || (r.title + " " + r.brand).toLowerCase().includes(q))
+    .sort((a, b) => {
+      const x = a[k] ?? -Infinity, y = b[k] ?? -Infinity;
+      return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir;
+    });
+  const head = COLS.map(([key, label, num]) => `<th class="sortable${num ? " n" : ""}${key === k ? " sorted" : ""}" data-sort="${key}" aria-sort="${key === k ? (dir > 0 ? "ascending" : "descending") : "none"}">${label}${key === k ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("");
+  $("products").innerHTML = `<thead><tr>${head}</tr></thead><tbody>` +
     (p.length ? p.map((r) => `<tr><td class="t" title="${esc(r.title)}">${esc(r.title)}</td><td>${esc(r.brand)}</td>
       <td class="n">${r.price == null ? "–" : "$" + r.price.toFixed(2)}</td><td class="n">${fmt.int(r.orders)}</td>
       <td class="n">${fmt.usd(r.sales)}</td><td class="n"><span class="pill">${r.avg_rating.toFixed(2)} ★</span></td></tr>`).join("")
       : `<tr><td colspan="6">No products match "${esc(state.search)}".</td></tr>`) + "</tbody>";
 }
 
-// ---------------------------------------------------------------- wiring
+// ---------------------------------------------------------------- state, sync, URL
 const renderers = {
   overview: renderOverview, sales: renderSales, satisfaction: renderSatisfaction,
   customers: renderCustomers, forecast: () => renderForecast(), brands: () => renderBrands(),
 };
-const activeTab = () => document.querySelector(".tabs .active").dataset.tab;
+
+const PRESETS = () => {
+  const lo = YEARS[0], hi = YEARS.at(-1);
+  return { all: [lo, hi], last5: [hi - 4, hi], last3: [hi - 2, hi], pre2020: [lo, 2019], since2020: [2020, hi] };
+};
+
+function syncUI() {
+  $("yFrom").value = state.from; $("yTo").value = state.to;
+  document.querySelectorAll("#presets [data-p]").forEach((b) => {
+    const [a, c] = PRESETS()[b.dataset.p]; b.classList.toggle("on", a === state.from && c === state.to);
+  });
+  document.querySelectorAll("#metricSeg button").forEach((b) => { const on = b.dataset.m === state.metric; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  $("maToggle").setAttribute("aria-pressed", state.ma); $("cmpToggle").setAttribute("aria-pressed", state.cmp);
+  document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.tab === state.tab; b.classList.toggle("active", on); b.setAttribute("aria-selected", on); });
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + state.tab));
+  document.querySelectorAll("#fcMetric button").forEach((b) => { const on = b.dataset.m === state.fcMetric; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  document.querySelectorAll(".tile[data-metric]").forEach((t) => t.classList.toggle("sel", t.dataset.metric === state.metric));
+  $("hero").classList.toggle("sel", state.metric === "sales");
+  $("hLabel").textContent = state.horizon + " months"; $("horizon").value = state.horizon;
+  $("whatif").value = state.whatif;
+  $("wLabel").textContent = state.whatif === 0 ? "as modelled" : (state.whatif > 0 ? "+" : "−") + Math.abs(state.whatif) + "%";
+  writeHash();
+}
+
+function writeHash() {
+  const p = new URLSearchParams();
+  if (state.tab !== "overview") p.set("tab", state.tab);
+  if (state.from !== YEARS[0]) p.set("from", state.from);
+  if (state.to !== YEARS.at(-1)) p.set("to", state.to);
+  if (state.metric !== "sales") p.set("m", state.metric);
+  if (state.fcMetric !== "sales") p.set("fm", state.fcMetric);
+  if (state.horizon !== 12) p.set("h", state.horizon);
+  if (state.whatif) p.set("w", state.whatif);
+  if (state.brand) p.set("brand", state.brand);
+  const s = p.toString();
+  try { history.replaceState(null, "", s ? "#" + s : location.pathname + location.search); } catch (e) {}
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1)), lo = YEARS[0], hi = YEARS.at(-1);
+  const num = (k, d, a, b) => { const v = parseInt(p.get(k)); return Number.isFinite(v) && v >= a && v <= b ? v : d; };
+  if (renderers[p.get("tab")]) state.tab = p.get("tab");
+  state.from = num("from", lo, lo, hi); state.to = num("to", hi, lo, hi);
+  if (state.from > state.to) { state.from = lo; state.to = hi; }
+  if (METRICS[p.get("m")]) state.metric = p.get("m");
+  if (D.forecast[p.get("fm")]) state.fcMetric = p.get("fm");
+  state.horizon = num("h", 12, 3, 24); state.whatif = num("w", 0, -30, 30);
+  if (p.get("brand")) state.brand = p.get("brand");
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
 
 function renderAll() {
   const f = filtered();
   $("subtitle").textContent = `Amazon · ${fmt.int(sum(M.map((r) => r.orders)))} customer reviews · ${state.from}–${state.to}`;
   renderHero(f); renderTiles(f); renderInsights(f);
-  renderers[activeTab()](f);
+  renderers[state.tab](f);
+  runCounters();
+}
+function setRange(a, b) { state.from = a; state.to = b; syncUI(); renderAll(); }
+function goTab(t) { state.tab = t; syncUI(); renderAll(); }
+function selectMetric(m) { state.metric = m; state.tab = "overview"; syncUI(); renderAll(); }
+
+function downloadCsv() {
+  const cols = ["month", "orders", "sales", "avg_rating", "pct_positive", "pct_negative", "customers", "new_customers"];
+  const csv = [cols.join(",")].concat(filtered().map((r) => cols.map((c) => r[c]).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = `amazon-appliances-${state.from}-${state.to}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  toast("CSV downloaded");
 }
 
 fetch("data.json").then((r) => r.json()).then((data) => {
-  D = data; M = rows(D.monthly);
-  const years = [...new Set(M.map((r) => yearOf(r.month)))];
-  state.to = years.at(-1);
-  ["yFrom", "yTo"].forEach((id) => { $(id).innerHTML = years.map((y) => `<option>${y}</option>`).join(""); });
-  $("yFrom").value = state.from; $("yTo").value = state.to;
-  const onYears = (e) => {
-    state.from = +$("yFrom").value; state.to = +$("yTo").value;
-    if (state.from > state.to) { if (e.target.id === "yFrom") state.to = state.from; else state.from = state.to; $("yFrom").value = state.from; $("yTo").value = state.to; }
-    renderAll();
-  };
-  $("yFrom").onchange = onYears; $("yTo").onchange = onYears;
+  D = data; M = rows(D.monthly); // years before 2012 have almost no data, so the range controls start at 2012
+  YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);
+  state.from = YEARS[0]; state.to = YEARS.at(-1);
+  readHash();
+  ["yFrom", "yTo"].forEach((id) => { $(id).innerHTML = YEARS.map((y) => `<option>${y}</option>`).join(""); });
 
-  $("tabs").onclick = (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    document.querySelectorAll(".tabs button").forEach((el) => { el.classList.toggle("active", el === b); el.setAttribute("aria-selected", el === b); });
-    document.querySelectorAll(".panel").forEach((el) => el.classList.remove("active"));
-    $("tab-" + b.dataset.tab).classList.add("active");
-    renderAll();
+  $("yFrom").onchange = () => { const a = +$("yFrom").value; setRange(a, Math.max(a, state.to)); };
+  $("yTo").onchange = () => { const b = +$("yTo").value; setRange(Math.min(b, state.from), b); };
+  $("presets").onclick = (e) => {
+    const b = e.target.closest("[data-p]"); if (!b) return;
+    const [a, c] = PRESETS()[b.dataset.p]; setRange(a, c);
   };
-  $("fcMetric").onclick = (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    state.fcMetric = b.dataset.m;
-    document.querySelectorAll("#fcMetric button").forEach((el) => { el.classList.toggle("on", el === b); el.setAttribute("aria-checked", el === b); });
-    renderForecast();
-  };
-  $("horizon").oninput = (e) => { state.horizon = +e.target.value; $("hLabel").textContent = state.horizon + " months"; renderForecast(); };
+  $("csvBtn").onclick = downloadCsv;
+  $("tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) goTab(b.dataset.tab); };
+
+  // metric selection from tiles, hero, segmented control
+  const pick = (e) => { const t = e.target.closest("[data-metric]"); if (t) selectMetric(t.dataset.metric); };
+  $("tiles").onclick = pick; $("hero").onclick = pick;
+  $("hero").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectMetric("sales"); } };
+  $("metricSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.metric = b.dataset.m; syncUI(); renderAll(); } };
+  $("maToggle").onclick = () => { state.ma = !state.ma; syncUI(); renderAll(); };
+  $("cmpToggle").onclick = () => { state.cmp = !state.cmp; syncUI(); renderAll(); };
+
+  // insights jump to the relevant tab
+  const go = (e) => { const li = e.target.closest("[data-go]"); if (li) goTab(li.dataset.go); };
+  $("insights").onclick = go;
+  $("insights").onkeydown = (e) => { if (e.key === "Enter") go(e); };
+
+  // forecast controls
+  $("fcMetric").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.fcMetric = b.dataset.m; syncUI(); renderForecast(); } };
+  $("horizon").oninput = (e) => { state.horizon = +e.target.value; syncUI(); renderForecast(); };
+  $("whatif").oninput = (e) => { state.whatif = +e.target.value; syncUI(); renderForecast(); };
+  $("whatifReset").onclick = () => { state.whatif = 0; syncUI(); renderForecast(); };
+
+  // brands & products
+  $("brandClose").onclick = () => { state.brand = null; syncUI(); renderBrands(); };
   $("prodSearch").oninput = (e) => { state.search = e.target.value; renderTable(); };
+  $("products").onclick = (e) => {
+    const th = e.target.closest("[data-sort]"); if (!th) return;
+    const k = th.dataset.sort;
+    state.sortDir = state.sortKey === k ? -state.sortDir : (k === "title" || k === "brand" ? 1 : -1); state.sortKey = k;
+    renderTable();
+  };
 
+  $("shareBtn").onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); toast("Link to this view copied"); }
+    catch (err) { toast("Copy the address bar to share this view"); }
+  };
   $("themeBtn").onclick = () => {
     const next = isDark() ? "light" : "dark";
     document.documentElement.dataset.theme = next;
@@ -379,5 +555,6 @@ fetch("data.json").then((r) => r.json()).then((data) => {
     renderAll();
   };
   matchMedia("(prefers-color-scheme: dark)").onchange = renderAll;
-  renderAll();
+  window.addEventListener("hashchange", () => { readHash(); syncUI(); renderAll(); });
+  syncUI(); renderAll();
 }).catch((e) => { $("subtitle").textContent = "Failed to load data.json: " + e; });
