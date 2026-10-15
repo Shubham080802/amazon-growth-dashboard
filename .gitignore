@@ -1,0 +1,7 @@
+# raw dataset (1.2 GB, download separately - see README)
+data_raw/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.claude/
