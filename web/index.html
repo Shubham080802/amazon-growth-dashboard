@@ -60,6 +60,7 @@
   <div class="toolbar">
     <nav class="tabs" id="tabs" role="tablist">
       <button role="tab" data-tab="brief" class="active">Executive brief</button>
+      <button role="tab" data-tab="market">Market &amp; company</button>
       <button role="tab" data-tab="lab">Forecast lab</button>
       <button role="tab" data-tab="overview">Performance</button>
       <button role="tab" data-tab="sales">Sales</button>
@@ -159,6 +160,8 @@
   </div>
 
   <div class="panel active" id="tab-brief">
+    <div class="notice" id="asofBrief"></div>
+    <section class="strip card" id="companyStrip"></section>
     <section class="verdict card" id="verdict"></section>
 
     <div class="grid2">
@@ -211,7 +214,55 @@
     </article>
   </div>
 
+  <div class="panel" id="tab-market">
+    <article class="card">
+      <header><h3>How current is each data source?</h3><p>Everything on this tab is real, current data. The category forecasts elsewhere rest on the one source that has no newer release.</p></header>
+      <div class="tablewrap fresh" id="fresh"></div>
+    </article>
+
+    <section>
+      <h2 class="sect">Amazon: actual results</h2>
+      <div class="tiles tiles-4" id="amzTiles"></div>
+    </section>
+    <div class="grid2">
+      <article class="card"><header><h3>Net sales by quarter</h3><p id="amzRevSub"></p></header><div class="plot h-lg" id="c-amz-rev"></div></article>
+      <article class="card"><header><h3>Growth and profitability</h3><p>Year-over-year net sales growth and operating margin.</p></header><div class="plot h-lg" id="c-amz-growth"></div></article>
+    </div>
+    <article class="card">
+      <header><h3>Latest quarter by segment</h3><p id="segSub"></p></header>
+      <div class="tablewrap"><table id="segTable"></table></div>
+    </article>
+
+    <section>
+      <h2 class="sect">Amazon: outlook</h2>
+      <div class="tiles tiles-4" id="amzFcTiles"></div>
+    </section>
+    <article class="card">
+      <header><h3 id="guideTitle">Our model vs Amazon's guidance</h3><p id="guideSub"></p></header>
+      <div class="plot sm" id="c-amz-guide"></div>
+      <p class="note" id="guideNote"></p>
+    </article>
+
+    <section>
+      <h2 class="sect">The wider market (U.S. Census Bureau and Bureau of Labor Statistics)</h2>
+      <div class="tiles tiles-4" id="mktTiles"></div>
+    </section>
+    <div class="grid2">
+      <article class="card"><header><h3>Retail growth, year over year</h3><p>Online retail has been outgrowing retail as a whole.</p></header><div class="plot" id="c-mkt-growth"></div></article>
+      <article class="card"><header><h3>Appliance producer prices</h3><p>Index, January 2020 = 100. Manufacturers' and retailers' prices.</p></header><div class="plot" id="c-mkt-ppi"></div></article>
+    </div>
+
+    <article class="card">
+      <header><h3>Why the category forecast was not stretched to today</h3>
+        <p>We tested whether these public indicators could stand in for the missing 2023 to 2026 category data, using the years where we have both.</p></header>
+      <div class="tablewrap"><table id="bridge"></table></div>
+      <p class="note">None of them reliably tracked the category's growth, so extending the category series with them would be guesswork presented as data. The category forecasts therefore stay anchored to the last real observation (March 2023) and say so. The pipeline rebuilds in about three minutes when a newer review dataset is published.</p>
+    </article>
+    <p class="note">Sources: <a href="https://www.sec.gov/edgar/sec-api-documentation">SEC EDGAR</a> (Amazon filings), <a href="https://fred.stlouisfed.org/">FRED</a> republishing U.S. Census Bureau and BLS data, and <a href="https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results">Amazon's Q2 2026 earnings release</a>. Segment detail and guidance were transcribed from that release by hand.</p>
+  </div>
+
   <div class="panel" id="tab-lab">
+    <div class="notice" id="asofLab"></div>
     <article class="card lab-controls">
       <div class="lab-row">
         <label class="field">Segment <select id="labSeg"></select></label>
@@ -326,5 +377,6 @@
 
 <script src="app.js"></script>
 <script src="lab.js"></script>
+<script src="market.js"></script>
 </body>
 </html>

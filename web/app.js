@@ -177,7 +177,7 @@ function renderInsights(f) {
   if (r.ok) items.push(["star", "satisfaction", "Satisfaction", `Average rating is ${r.cur.toFixed(2)}, ${r.diff >= 0 ? "up" : "down"} ${Math.abs(r.diff).toFixed(2)} on last year. ${fmt.pct(neg.cur)} of reviews are 1–2★.`]);
 
   const td = SEG.total.d;
-  items.push(["next", "lab", "Outlook", `The model expects ${fmt.usdC(td.fc12)} over the next 12 months, ${pctTxt(td.growth)} vs the last 12.`]);
+  items.push(["next", "lab", "Outlook", `From ${fmt.month(F.meta.last_month)}, the model expected ${fmt.usdC(td.fc12)} over the following 12 months, ${pctTxt(td.growth)} vs the 12 before.`]);
 
   $("insights").innerHTML = items.map(([ic, tab, t, body]) =>
     `<li class="go" data-go="${tab}" tabindex="0" role="button"><span class="ins-ic">${icon(ic)}</span><div><b>${t}</b><span class="t">${body}</span></div></li>`).join("");
@@ -384,7 +384,7 @@ function renderTable() {
 // ---------------------------------------------------------------- state, sync, URL
 const renderers = {
   overview: renderOverview, sales: renderSales, satisfaction: renderSatisfaction,
-  customers: renderCustomers, brief: () => renderBrief(), lab: () => renderLab(), brands: () => renderBrands(),
+  customers: renderCustomers, brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), brands: () => renderBrands(),
 };
 
 const PRESETS = () => {
@@ -455,8 +455,8 @@ function downloadCsv() {
   toast("CSV downloaded");
 }
 
-Promise.all([fetch("data.json").then((r) => r.json()), fetch("forecast.json").then((r) => r.json())]).then(([data, fdata]) => {
-  D = data; M = rows(D.monthly); prepForecast(fdata); // years before 2012 have almost no data, so the range controls start at 2012
+Promise.all(["data.json", "forecast.json", "market.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata]) => {
+  D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); // years before 2012 have almost no data, so the range controls start at 2012
   YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);
   state.from = YEARS[0]; state.to = YEARS.at(-1);
   readHash();

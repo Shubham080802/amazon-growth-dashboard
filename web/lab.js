@@ -94,15 +94,16 @@ function renderBrief() {
   if (B.target == null) B.target = Math.round((d.last12 * 1.10) / 1e4) * 1e4;
   const pT = probAtLeast(q12, B.target), pG = d.pGrowth;
   const flat = Math.abs(d.growth) < 0.03;
-  const head = flat ? "Sales are expected to be roughly flat over the next 12 months"
-    : `Sales are expected to ${d.growth > 0 ? "grow" : "shrink"} ${Math.abs(d.growth * 100).toFixed(0)}% over the next 12 months`;
+  const asof = fmt.month(F.meta.last_month);
+  const head = flat ? `As of ${asof}, sales were set to be roughly flat over the following 12 months`
+    : `As of ${asof}, sales were set to ${d.growth > 0 ? "grow" : "shrink"} ${Math.abs(d.growth * 100).toFixed(0)}% over the following 12 months`;
   const gcol = pT >= 0.65 ? "var(--good)" : pT >= 0.35 ? "var(--c4)" : "var(--bad)";
   const gword = pT >= 0.65 ? "Likely" : pT >= 0.35 ? "Toss-up" : "Unlikely";
   const ang = Math.PI * Math.min(0.999, Math.max(0.001, pT)), gx = 66 - 52 * Math.cos(ang), gy = 66 - 52 * Math.sin(ang);
   $("verdict").innerHTML = `
     <div>
       <h2>${head}</h2>
-      <p class="lead"><b>${fmt.usdC(d.fc12)}</b> expected, with a likely range of <b>${fmt.usdC(d.lo12)} to ${fmt.usdC(d.hi12)}</b>, compared with <b>${fmt.usdC(d.last12)}</b> in the last 12 months (${fmt.month(F.meta.last_month)} and earlier).</p>
+      <p class="lead"><b>${fmt.usdC(d.fc12)}</b> expected, with a likely range of <b>${fmt.usdC(d.lo12)} to ${fmt.usdC(d.hi12)}</b>, compared with <b>${fmt.usdC(d.last12)}</b> in the 12 months to ${asof}.</p>
       <div class="badges">
         <span class="badge ${pG >= 0.65 ? "good" : pG >= 0.35 ? "warn" : "bad"}">${(pG * 100).toFixed(0)}% chance of beating last year</span>
         ${gradeBadge(d.grade)}
@@ -124,6 +125,7 @@ function renderBrief() {
   $("briefTarget").onchange = (e) => { const v = parseMoney(e.target.value); if (Number.isFinite(v) && v > 0) { B.target = v; writeHash(); } renderBrief(); };
   $("briefQuick").onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; B.target = Math.round(d.last12 * (1 + b.dataset.p / 100)); writeHash(); renderBrief(); };
 
+  renderNotices(); renderCompanyStrip();
   renderPulse(); renderDecisions(); renderScorecard();
 }
 
@@ -197,7 +199,7 @@ function renderScorecard() {
   const val = { label: (c) => c.s.label.toLowerCase(), last12: (c) => c.s.d.last12, fc12: (c) => c.s.d.fc12, growth: (c) => c.s.d.growth, pGrowth: (c) => c.s.d.pGrowth,
     rNow: (c) => c.s.d.rNow ?? -1, wmape: (c) => c.s.d.wmape, action: (c) => ["invest", "fix", "watch", "risk"].indexOf(c.a.key) };
   list.sort((a, b) => { const x = val[k](a), y = val[k](b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir; });
-  const cols = [["label", "Segment"], ["last12", "Last 12 mo"], ["fc12", "Next 12 mo"], ["growth", "Change"], ["pGrowth", "Chance of growth"], ["rNow", "Rating"], ["wmape", "Confidence"], ["action", "Suggested action"]];
+  const cols = [["label", "Segment"], ["last12", "Last 12 mo"], ["fc12", "Following 12 mo"], ["growth", "Change"], ["pGrowth", "Chance of growth"], ["rNow", "Rating"], ["wmape", "Confidence"], ["action", "Suggested action"]];
   const head = cols.map(([key, l]) => `<th class="sortable${key === k ? " sorted" : ""}${key === "label" ? "" : " n"}" data-sort="${key}">${l}${key === k ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("");
   const body = list.map(({ s, a }) => {
     const d = s.d, arrow = d.dR == null ? "" : d.dR <= -0.05 ? " ▼" : d.dR >= 0.05 ? " ▲" : "";
@@ -247,7 +249,7 @@ function renderLab() {
   const hov = m === "sales" ? "%{y:$,.0f}" : m === "orders" ? "%{y:,.0f}" : "%{y:.2f} ★";
   const VIOLET = "#8a6fd6";
 
-  $("labTitle").textContent = `${s.label}: ${name.toLowerCase()}, next ${h} months`;
+  $("labTitle").textContent = `${s.label}: ${name.toLowerCase()}, ${h} months after ${fmt.month(F.meta.last_month)}`;
   $("labSub").textContent = `${L.view === "cum" && !isR ? "Running total from the first forecast month. " : ""}Shaded area is the ${L.band}% range; hover for values.${scen ? " Purple shows your scenario." : ""}`;
 
   if (L.view === "cum" && !isR) {
@@ -285,7 +287,7 @@ function renderLab() {
       annotations: [{ x: last, y: 1, yref: "paper", text: "Forecast starts", showarrow: false, xanchor: "left", xshift: 6, yshift: -4, font: { color: css("--muted"), size: 11.5 } }],
     }));
   }
-  renderLabTiles(c); renderBridge(c); renderSeasonal(c); renderPlan(c); renderTrust(c);
+  renderNotices(); renderLabTiles(c); renderBridge(c); renderSeasonal(c); renderPlan(c); renderTrust(c);
   syncLabUI(c);
 }
 
@@ -298,7 +300,7 @@ function renderLabTiles(c) {
   const se = c.se, g = se.wmape, grade = gradeOf(g);
   const unitFmt = (v) => labFmt(m, v);
   $("labTiles").innerHTML = [
-    tile({ label: isR ? `Expected rating, next ${h} mo` : `Expected, next ${h} mo${scen ? " (scenario)" : ""}`, value: unitFmt(total),
+    tile({ label: isR ? `Expected rating, ${h} mo after ${fmt.month(F.meta.last_month)}` : `Expected, ${h} mo after ${fmt.month(F.meta.last_month)}${scen ? " (scenario)" : ""}`, value: unitFmt(total),
       delta: deltaChip(total / lastH - 1, pctTxt), sub: `vs last ${h} mo${scen ? ` · base ${unitFmt(baseTotal)}` : ""}` }),
     tile({ label: "Likely range (80%)", value: `${unitFmt(lo)} – ${unitFmt(hi)}`, sub: "10th to 90th percentile" }),
     tile({ label: isR ? "Chance rating improves" : "Chance of reaching target", value: `${(pT * 100).toFixed(0)}%`, sub: `${word}${isR ? "" : " · target " + unitFmt(L.target)}` }),
@@ -425,6 +427,7 @@ function labReadHash(p) {
 
 function initLab() {
   const L = state.lab, B = state.brief;
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-go-tab]"); if (b) goTab(b.dataset.goTab); });
   // segment picker
   const groups = [["total", "Whole category"], ["brand", "Brands"], ["band", "Price bands"], ["product", "Top products"]];
   $("labSeg").innerHTML = groups.map(([k, t]) => `<optgroup label="${t}">${F.segments.filter((s) => s.kind === k).map((s) => `<option value="${s.id}">${esc2(s.label)}</option>`).join("")}</optgroup>`).join("");
