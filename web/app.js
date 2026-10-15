@@ -35,8 +35,8 @@ const FM = { usdC: fmt.usdC, intC: fmt.intC, int: fmt.int, rating: fmt.rating, p
 
 let D, M, YEARS;
 const state = {
-  tab: "overview", from: 2012, to: 2023, metric: "sales", ma: true, cmp: false,
-  fcMetric: "sales", horizon: 12, whatif: 0, search: "", sortKey: "orders", sortDir: -1, brand: null,
+  tab: "brief", from: 2012, to: 2023, metric: "sales", ma: true, cmp: false,
+  search: "", sortKey: "orders", sortDir: -1, brand: null,
 };
 
 // ---------------------------------------------------------------- plotly base
@@ -176,9 +176,8 @@ function renderInsights(f) {
   const r = yoy(f, "avg_rating", "mean"), neg = yoy(f, "pct_negative", "mean");
   if (r.ok) items.push(["star", "satisfaction", "Satisfaction", `Average rating is ${r.cur.toFixed(2)}, ${r.diff >= 0 ? "up" : "down"} ${Math.abs(r.diff).toFixed(2)} on last year. ${fmt.pct(neg.cur)} of reviews are 1–2★.`]);
 
-  const fc = D.forecast.sales;
-  const next = sum(fc.forecast.mean.slice(0, 12)), prev = sum(fc.history.value.slice(-12));
-  items.push(["next", "forecast", "Outlook", `The model expects ${fmt.usdC(next)} over the next 12 months, ${pctTxt(next / prev - 1)} vs the last 12.`]);
+  const td = SEG.total.d;
+  items.push(["next", "lab", "Outlook", `The model expects ${fmt.usdC(td.fc12)} over the next 12 months, ${pctTxt(td.growth)} vs the last 12.`]);
 
   $("insights").innerHTML = items.map(([ic, tab, t, body]) =>
     `<li class="go" data-go="${tab}" tabindex="0" role="button"><span class="ins-ic">${icon(ic)}</span><div><b>${t}</b><span class="t">${body}</span></div></li>`).join("");
@@ -308,43 +307,6 @@ function renderCustomers(f) {
   ].join("");
 }
 
-function renderForecast() {
-  const m = state.fcMetric, h = state.horizon, fc = D.forecast[m];
-  const mult = m === "avg_rating" ? 1 : 1 + state.whatif / 100;   // scenarios don't apply to a 1-5 rating
-  $("whatifWrap").style.display = m === "avg_rating" ? "none" : "";
-  const sc = (a) => a.slice(0, h).map((v) => v * mult);
-  const fx = fc.forecast.month.slice(0, h), mu = sc(fc.forecast.mean), lo = sc(fc.forecast.lo), hi = sc(fc.forecast.hi);
-  const name = { sales: "Sales proxy", orders: "Orders", avg_rating: "Average rating" }[m];
-  const hov = m === "sales" ? "%{y:$,.0f}" : m === "orders" ? "%{y:,.0f}" : "%{y:.2f}";
-  const scen = state.whatif !== 0 && m !== "avg_rating";
-  $("fcTitle").textContent = `${name}: next ${h} months${scen ? ` (scenario ${state.whatif > 0 ? "+" : "−"}${Math.abs(state.whatif)}%)` : ""}`;
-  const lastActual = fc.history.month.at(-1);
-  draw("c-forecast", [
-    { x: fc.history.month, y: fc.history.value, name: "Actual", mode: "lines", line: line(css("--c1"), 2.5), hovertemplate: hov },
-    { x: fx, y: hi, mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
-    { x: fx, y: lo, mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: rgba(css("--c2"), 0.14), name: "95% interval", hoverinfo: "skip" },
-    { x: fx, y: mu, name: scen ? "Forecast (scenario)" : "Forecast", mode: "lines", line: { color: css("--c2"), width: 2.5, dash: "dash" }, hovertemplate: hov },
-    { x: fc.backtest.month, y: fc.backtest.value, name: "Backtest", mode: "lines", line: { color: css("--muted"), width: 1.8, dash: "dot" }, hovertemplate: hov },
-    dot(fx.at(-1), mu.at(-1), css("--c2")),
-  ], layout({
-    margin: { l: 8, r: 24, t: 28, b: 8 },
-    xaxis: { range: ["2017-01", fx.at(-1)], showspikes: true, spikemode: "across", spikecolor: css("--axis"), spikethickness: 1, spikedash: "solid" },
-    yaxis: { tickprefix: m === "sales" ? "$" : "", tickformat: m === "avg_rating" ? ".1f" : ".2~s", rangemode: m === "avg_rating" ? "normal" : "tozero" },
-    shapes: [{ type: "line", xref: "x", yref: "paper", x0: lastActual, x1: lastActual, y0: 0, y1: 1, line: { color: css("--axis"), width: 1, dash: "dot" } }],
-    annotations: [{ x: lastActual, y: 1, yref: "paper", text: "Forecast starts", showarrow: false, xanchor: "left", xshift: 6, yshift: -4, font: { color: css("--muted"), size: 11.5 } }],
-  }));
-
-  const total = m === "avg_rating" ? mean(mu) : sum(mu), prevT = m === "avg_rating" ? mean(fc.history.value.slice(-h)) : sum(fc.history.value.slice(-h));
-  const f = (v) => (m === "sales" ? fmt.usdC(v) : m === "orders" ? fmt.intC(v) : v.toFixed(2) + " ★");
-  const quality = fc.mape < 0.05 ? "Very accurate" : fc.mape < 0.15 ? "Good" : fc.mape < 0.3 ? "Moderate" : "Low";
-  $("fcTiles").innerHTML = [
-    tile({ label: m === "avg_rating" ? `Avg rating, next ${h} mo` : `Projected total, next ${h} mo`, value: f(total), delta: deltaChip(total / prevT - 1, pctTxt), sub: `vs last ${h} mo` }),
-    tile({ label: "Forecast at the end", value: f(mu.at(-1)), sub: `${fmt.month(fx.at(-1))} · monthly` }),
-    tile({ label: "Backtest error (MAPE)", value: fmt.pct(fc.mape), sub: `${quality} · last 12 months` }),
-    tile({ label: "Uncertainty at the end", value: "± " + f((hi.at(-1) - lo.at(-1)) / 2), sub: "95% interval half-width" }),
-  ].join("");
-}
-
 function brandAgg(bm) {
   const agg = {};
   bm.forEach((r) => { const a = (agg[r.brand] ||= { orders: 0, sales: 0, rs: 0 }); a.orders += r.orders; a.sales += r.sales; a.rs += r.rating_sum; });
@@ -422,7 +384,7 @@ function renderTable() {
 // ---------------------------------------------------------------- state, sync, URL
 const renderers = {
   overview: renderOverview, sales: renderSales, satisfaction: renderSatisfaction,
-  customers: renderCustomers, forecast: () => renderForecast(), brands: () => renderBrands(),
+  customers: renderCustomers, brief: () => renderBrief(), lab: () => renderLab(), brands: () => renderBrands(),
 };
 
 const PRESETS = () => {
@@ -439,25 +401,20 @@ function syncUI() {
   $("maToggle").setAttribute("aria-pressed", state.ma); $("cmpToggle").setAttribute("aria-pressed", state.cmp);
   document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.tab === state.tab; b.classList.toggle("active", on); b.setAttribute("aria-selected", on); });
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + state.tab));
-  document.querySelectorAll("#fcMetric button").forEach((b) => { const on = b.dataset.m === state.fcMetric; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
   document.querySelectorAll(".tile[data-metric]").forEach((t) => t.classList.toggle("sel", t.dataset.metric === state.metric));
   $("hero").classList.toggle("sel", state.metric === "sales");
-  $("hLabel").textContent = state.horizon + " months"; $("horizon").value = state.horizon;
-  $("whatif").value = state.whatif;
-  $("wLabel").textContent = state.whatif === 0 ? "as modelled" : (state.whatif > 0 ? "+" : "−") + Math.abs(state.whatif) + "%";
+  document.body.dataset.tab = state.tab;
   writeHash();
 }
 
 function writeHash() {
   const p = new URLSearchParams();
-  if (state.tab !== "overview") p.set("tab", state.tab);
+  if (state.tab !== "brief") p.set("tab", state.tab);
   if (state.from !== YEARS[0]) p.set("from", state.from);
   if (state.to !== YEARS.at(-1)) p.set("to", state.to);
   if (state.metric !== "sales") p.set("m", state.metric);
-  if (state.fcMetric !== "sales") p.set("fm", state.fcMetric);
-  if (state.horizon !== 12) p.set("h", state.horizon);
-  if (state.whatif) p.set("w", state.whatif);
   if (state.brand) p.set("brand", state.brand);
+  labWriteHash(p);
   const s = p.toString();
   try { history.replaceState(null, "", s ? "#" + s : location.pathname + location.search); } catch (e) {}
 }
@@ -468,8 +425,7 @@ function readHash() {
   state.from = num("from", lo, lo, hi); state.to = num("to", hi, lo, hi);
   if (state.from > state.to) { state.from = lo; state.to = hi; }
   if (METRICS[p.get("m")]) state.metric = p.get("m");
-  if (D.forecast[p.get("fm")]) state.fcMetric = p.get("fm");
-  state.horizon = num("h", 12, 3, 24); state.whatif = num("w", 0, -30, 30);
+  labReadHash(p);
   if (p.get("brand")) state.brand = p.get("brand");
 }
 
@@ -482,7 +438,7 @@ function toast(msg) {
 function renderAll() {
   const f = filtered();
   $("subtitle").textContent = `Amazon · ${fmt.int(sum(M.map((r) => r.orders)))} customer reviews · ${state.from}–${state.to}`;
-  renderHero(f); renderTiles(f); renderInsights(f);
+  if (state.tab === "overview") { renderHero(f); renderTiles(f); renderInsights(f); }
   renderers[state.tab](f);
   runCounters();
 }
@@ -499,8 +455,8 @@ function downloadCsv() {
   toast("CSV downloaded");
 }
 
-fetch("data.json").then((r) => r.json()).then((data) => {
-  D = data; M = rows(D.monthly); // years before 2012 have almost no data, so the range controls start at 2012
+Promise.all([fetch("data.json").then((r) => r.json()), fetch("forecast.json").then((r) => r.json())]).then(([data, fdata]) => {
+  D = data; M = rows(D.monthly); prepForecast(fdata); // years before 2012 have almost no data, so the range controls start at 2012
   YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);
   state.from = YEARS[0]; state.to = YEARS.at(-1);
   readHash();
@@ -528,11 +484,7 @@ fetch("data.json").then((r) => r.json()).then((data) => {
   $("insights").onclick = go;
   $("insights").onkeydown = (e) => { if (e.key === "Enter") go(e); };
 
-  // forecast controls
-  $("fcMetric").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.fcMetric = b.dataset.m; syncUI(); renderForecast(); } };
-  $("horizon").oninput = (e) => { state.horizon = +e.target.value; syncUI(); renderForecast(); };
-  $("whatif").oninput = (e) => { state.whatif = +e.target.value; syncUI(); renderForecast(); };
-  $("whatifReset").onclick = () => { state.whatif = 0; syncUI(); renderForecast(); };
+  initLab();
 
   // brands & products
   $("brandClose").onclick = () => { state.brand = null; syncUI(); renderBrands(); };
@@ -557,4 +509,4 @@ fetch("data.json").then((r) => r.json()).then((data) => {
   matchMedia("(prefers-color-scheme: dark)").onchange = renderAll;
   window.addEventListener("hashchange", () => { readHash(); syncUI(); renderAll(); });
   syncUI(); renderAll();
-}).catch((e) => { $("subtitle").textContent = "Failed to load data.json: " + e; });
+}).catch((e) => { $("subtitle").textContent = "Failed to load data: " + e; });
