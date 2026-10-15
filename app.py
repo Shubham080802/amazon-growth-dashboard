@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from forecasting import backtest_mape, forecast
 
 DATA = Path(__file__).parent / "data"
 BLUE, GREEN, RED, AMBER, GREY = "#2a6fdb", "#1f9d6b", "#d64545", "#e0a526", "#8a94a6"
@@ -38,18 +38,6 @@ def yoy(df, col, how="sum"):
     agg = (lambda s: s.sum()) if how == "sum" else (lambda s: s.mean())
     cur, prev = agg(df[col].iloc[-12:]), agg(df[col].iloc[-24:-12])
     return cur, (cur / prev - 1) if prev else np.nan
-
-
-def forecast(series, horizon, seasonal=True):
-    """Holt-Winters with damped trend; intervals from in-sample residuals."""
-    kw = dict(trend="add", damped_trend=True)
-    if seasonal and len(series) >= 36:
-        kw.update(seasonal="add", seasonal_periods=12)
-    fit = ExponentialSmoothing(series, **kw).fit()
-    mean = fit.forecast(horizon)
-    sd = np.std(fit.resid, ddof=1)
-    band = 1.96 * sd * np.sqrt(np.arange(1, horizon + 1))
-    return mean.clip(lower=0), (mean - band).clip(lower=0), mean + band
 
 
 monthly, mrating, brand_m, products = load()
@@ -187,10 +175,7 @@ with tab_fc:
     s = s.asfreq("MS")
     mean, lo, hi = forecast(s, horizon)
 
-    # backtest: train through 12 months ago, compare with the last 12 months
-    test, train = s.iloc[-12:], s.iloc[:-12]
-    bt, _, _ = forecast(train, 12)
-    mape = float(np.mean(np.abs((test.values - bt.values) / test.values)))
+    mape, bt = backtest_mape(s)
 
     fig = go.Figure()
     fig.add_scatter(x=s.index, y=s.values, name="Actual", line=dict(color=BLUE, width=2.5))
