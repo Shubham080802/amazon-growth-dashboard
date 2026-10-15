@@ -10,8 +10,19 @@ Streamlit + Plotly dashboard analysing growth of Amazon's Appliances category fr
 - **`web/`** is a static site (Plotly.js, forecasts precomputed in Python). This is what is deployed on Vercel.
 - **`app.py`** is the original Streamlit app, with live Python forecasting.
 
+## Data sources and how current they are
+| Source | Covers | Latest | Used for |
+|---|---|---|---|
+| [Amazon Reviews 2023](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) (UC San Diego) | 2.1M Appliances reviews | **Mar 2023** (no newer release exists) | category forecasts, brands, products |
+| [SEC EDGAR](https://www.sec.gov/edgar/sec-api-documentation) | Amazon quarterly financials | Q2 2026 | Amazon actuals and revenue outlook |
+| [Amazon Q2 2026 release](https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results) | segments, guidance | Q2 2026 | segment table, guidance check (transcribed by hand) |
+| [FRED](https://fred.stlouisfed.org/) (Census Bureau, BLS) | e-commerce, online retail, appliance stores, appliance prices | Sep 2026 | market context |
+
+The category review data is the only source that is out of date. Public market indicators do **not** reliably track its growth (tested; see the "Market & company" tab), so the category series is not extended with them. Refresh the data and rebuild when a newer review dataset is published.
+
 ## Built for decisions (web version)
 - **Executive brief:** one-sentence outlook with a likely range and confidence, an annual-target tracker (chance of hitting a target), a monthly "is this on track?" check against what the model expected, suggested Invest / Fix / Risk decisions, and a scorecard for every brand, price band and top product.
+- **Market & company:** Amazon's real quarterly results through Q2 2026 (SEC filings), segment results, a quarterly net sales outlook checked against Amazon's own Q3 guidance, and U.S. retail and appliance-price context through Sep 2026.
 - **Forecast lab:** pick any segment and measure, choose the horizon, see a month-by-month or running-total view with 80%/95% ranges, test scenarios (demand, price, elasticity), see what drives the change (orders vs price and mix), the seasonal pattern, a downloadable monthly plan, and how reliable the model has been.
 - How the model works and its limits: [docs/MODEL.md](docs/MODEL.md).
 

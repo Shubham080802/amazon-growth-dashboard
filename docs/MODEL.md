@@ -18,6 +18,15 @@ Monthly **sales proxy**, **orders** and **average rating** for 46 segments: the 
 - **Calibration:** simulated ranges are scaled (0.6x to 3x) until an 80% range would have contained the real outcome about 80% of the time in the backtests. The scale factor and the observed coverage are reported per segment.
 - **Minimum history:** 36 months. Newer products are not forecast.
 
+## Amazon's own results (company level)
+`scripts/build_market_data.py` pulls Amazon's quarterly net sales, operating income, net income, operating cash flow and capital spending from SEC EDGAR (Q4 is derived as the full year minus Q1-Q3, because 10-Ks report only the year). The same engine forecasts quarterly net sales with a 4-quarter season, 8-quarter horizon and backtests from 8, 6 and 4 quarters back. Its next-quarter range is compared with Amazon's published guidance. Amazon has noted that Prime Day timing moves its Q3 growth by nearly 4 points, which a seasonal model cannot see, so a gap to guidance is a prompt to watch the quarter, not proof of error.
+
+## Why the category series is not extended to today
+The review data ends Mar 2023 and no newer release exists. We tested whether public indicators (online retail sales, appliance-store sales, total retail, appliance producer prices; Census Bureau and BLS via FRED) could bridge the gap, using the years where both exist: correlation of 12-month growth, and out-of-sample error (fit to 2020, test 2021 to Mar 2023) against a naive guess. None passed (correlations between -0.6 and -0.05; the model with each indicator was no better than the naive guess, or only "better" through a negative, implausible relationship on a short shared trend). The results are rebuilt into the dashboard's Market & company tab. Extending the category with them would present a guess as data.
+
+## Reproducibility
+Simulated paths use shocks drawn here with a fixed seed (statsmodels' built-in bootstrap ignores its seed, which made small-segment numbers change between runs). The expected value is a 1%-99% trimmed mean so a few extreme simulated paths cannot move it. Two consecutive builds produce identical output.
+
 ## Monitoring ("is this month on track?")
 For each of the last 12 months the chosen model is refitted on data up to the previous month and asked what it expected. A month outside the 10th-90th percentile range is flagged. About 20% of months should be flagged by chance; a cluster of flags across many segments usually means a market-wide move.
 
@@ -46,4 +55,5 @@ Thresholds are adjustable in the dashboard.
 python scripts/build_segments.py data_raw data        # needs the raw JSONL files, see README
 OMP_NUM_THREADS=1 python scripts/build_forecasts.py   # ~90 seconds
 python scripts/export_web_data.py
+python scripts/build_market_data.py                   # internet needed; refreshes SEC + FRED data
 ```
