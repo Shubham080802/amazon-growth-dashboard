@@ -1,0 +1,68 @@
+{
+ "products": 94327,
+ "brand_missing_before": 0.0097,
+ "brand_missing_after": 0.0108,
+ "type_missing_before": 0.0348,
+ "type_classifier_cv_accuracy": 0.8103,
+ "price_missing_products_before": 0.5046,
+ "price_model_by_launch_cohort": {
+  "unknown": {
+   "products": 3628,
+   "bias_of_review_weighted_total": -0.001,
+   "median_abs_pct_error": 0.298
+  },
+  "to 2014": {
+   "products": 11425,
+   "bias_of_review_weighted_total": -0.034,
+   "median_abs_pct_error": 0.32
+  },
+  "2015-16": {
+   "products": 5959,
+   "bias_of_review_weighted_total": -0.046,
+   "median_abs_pct_error": 0.271
+  },
+  "2017-18": {
+   "products": 5542,
+   "bias_of_review_weighted_total": 0.043,
+   "median_abs_pct_error": 0.284
+  },
+  "2019-20": {
+   "products": 10358,
+   "bias_of_review_weighted_total": 0.095,
+   "median_abs_pct_error": 0.244
+  },
+  "2021-23": {
+   "products": 9814,
+   "bias_of_review_weighted_total": -0.067,
+   "median_abs_pct_error": 0.256
+  }
+ },
+ "price_model": {
+  "trained_on_products": 46726,
+  "r2_log_price": 0.805,
+  "median_abs_pct_error_per_product": 0.254,
+  "share_within_25pct": 0.493,
+  "review_weighted_median_abs_pct_error": 0.223,
+  "smearing_factor_raw": 1.144,
+  "calibration_bias_removed": 0.0459,
+  "smearing_factor": 1.094,
+  "interval80_log": [
+   -0.539,
+   0.558
+  ],
+  "group_level": {
+   "groups_tested": 486,
+   "median_abs_error_of_group_total": 0.089,
+   "p90_abs_error_of_group_total": 0.245,
+   "bias_of_total": -0.0047
+  }
+ },
+ "price_missing_products_after": 0,
+ "price_estimated_products": 47601,
+ "price_range_check": {
+  "min": 0.01,
+  "median": 32.49,
+  "max": 21095.62
+ },
+ "types": 33
+}
