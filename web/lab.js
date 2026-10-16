@@ -3,7 +3,7 @@
 
 let F = null, SEG = {}, FMONTHS = [];
 const QI = { p05: 0, p10: 1, p25: 4, p50: 9, p75: 14, p90: 17, p95: 18 };   // positions in the stored 19 quantiles
-const KIND = { total: "Total", brand: "Brand", band: "Price band", product: "Product" };
+const KIND = { total: "Total", family: "Parts vs appliances", type: "Product type", brand: "Brand", band: "Price band", product: "Product" };
 const pmOf = (s) => (s.series.sales ? "sales" : "orders");
 const esc2 = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const sgn = (v, f) => (v >= 0 ? "+" : "−") + f(Math.abs(v));
@@ -140,13 +140,13 @@ function renderPulse() {
   monitorChart("c-pulse", mon, m);
 
   // segments outside their expected range in the latest month
-  const rows = F.segments.filter((s) => (s.kind === "brand" || s.kind === "band")).map((s) => {
+  const rows = F.segments.filter((s) => (s.kind === "brand" || s.kind === "band" || s.kind === "type")).map((s) => {
     const mm = (s.series.sales || s.series.orders).monitor.at(-1), metric = s.series.sales ? "sales" : "orders";
     return { s, mm, metric, ...status(mm, metric) };
   });
   const out = rows.filter((r) => r.above || r.below).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
   const totalOut = st.above || st.below;
-  $("alertSub").textContent = `${out.length} of ${rows.length} brands and price bands are outside the range the model expected in ${fmt.month(last.month)}.` +
+  $("alertSub").textContent = `${out.length} of ${rows.length} brands, price bands and product types are outside the range the model expected in ${fmt.month(last.month)}.` +
     (totalOut && out.length > 3 ? " The whole category is also outside its range, so much of this is a market-wide move rather than separate problems." : "");
   $("alerts").innerHTML = out.length ? `<div class="alist">${out.slice(0, 6).map((r) => `
     <div class="arow" data-open="${r.s.id}" role="button" tabindex="0">
@@ -156,7 +156,7 @@ function renderPulse() {
 }
 
 function pickDecisions() {
-  const cand = F.segments.filter((s) => s.kind !== "total").map((s) => ({ s, a: decide(s), inc: s.d.fc12 - s.d.last12 }));
+  const cand = F.segments.filter((s) => s.kind !== "total" && s.kind !== "family").map((s) => ({ s, a: decide(s), inc: s.d.fc12 - s.d.last12 }));
   const best = (key, cmp) => {
     const all = cand.filter((c) => c.a.key === key);
     const solid = all.filter((c) => c.s.kind !== "product" && !c.a.tentative);
@@ -195,7 +195,7 @@ function renderDecisions() {
 
 function renderScorecard() {
   const B = state.brief, k = B.sortKey, dir = B.sortDir;
-  let list = F.segments.filter((s) => s.kind !== "total" && (B.filter === "all" || s.kind === B.filter)).map((s) => ({ s, a: decide(s) }));
+  let list = F.segments.filter((s) => s.kind !== "total" && (B.filter === "all" || s.kind === B.filter || (B.filter === "type" && s.kind === "family"))).map((s) => ({ s, a: decide(s) }));
   const val = { label: (c) => c.s.label.toLowerCase(), last12: (c) => c.s.d.last12, fc12: (c) => c.s.d.fc12, growth: (c) => c.s.d.growth, pGrowth: (c) => c.s.d.pGrowth,
     rNow: (c) => c.s.d.rNow ?? -1, wmape: (c) => c.s.d.wmape, action: (c) => ["invest", "fix", "watch", "risk"].indexOf(c.a.key) };
   list.sort((a, b) => { const x = val[k](a), y = val[k](b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir; });
@@ -429,7 +429,7 @@ function initLab() {
   const L = state.lab, B = state.brief;
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-go-tab]"); if (b) goTab(b.dataset.goTab); });
   // segment picker
-  const groups = [["total", "Whole category"], ["brand", "Brands"], ["band", "Price bands"], ["product", "Top products"]];
+  const groups = [["total", "Whole category"], ["family", "Parts vs appliances"], ["type", "Product types"], ["brand", "Brands"], ["band", "Price bands"], ["product", "Top products"]];
   $("labSeg").innerHTML = groups.map(([k, t]) => `<optgroup label="${t}">${F.segments.filter((s) => s.kind === k).map((s) => `<option value="${s.id}">${esc2(s.label)}</option>`).join("")}</optgroup>`).join("");
   const redo = () => { writeHash(); renderLab(); };
   $("labSeg").onchange = (e) => { L.seg = e.target.value; L.metric = pmOf(SEG[L.seg]); L.touched = false; redo(); };

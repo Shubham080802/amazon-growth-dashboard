@@ -384,7 +384,7 @@ function renderTable() {
 // ---------------------------------------------------------------- state, sync, URL
 const renderers = {
   overview: renderOverview, sales: renderSales, satisfaction: renderSatisfaction,
-  customers: renderCustomers, brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), brands: () => renderBrands(),
+  customers: renderCustomers, brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), products: () => renderProducts(), quality: () => renderQuality(), brands: () => renderBrands(),
 };
 
 const PRESETS = () => {
@@ -415,6 +415,7 @@ function writeHash() {
   if (state.metric !== "sales") p.set("m", state.metric);
   if (state.brand) p.set("brand", state.brand);
   labWriteHash(p);
+  if (state.px.sel) p.set("pid", state.px.sel);
   const s = p.toString();
   try { history.replaceState(null, "", s ? "#" + s : location.pathname + location.search); } catch (e) {}
 }
@@ -426,6 +427,7 @@ function readHash() {
   if (state.from > state.to) { state.from = lo; state.to = hi; }
   if (METRICS[p.get("m")]) state.metric = p.get("m");
   labReadHash(p);
+  if (p.get("pid")) state.px.sel = p.get("pid");
   if (p.get("brand")) state.brand = p.get("brand");
 }
 
@@ -455,8 +457,8 @@ function downloadCsv() {
   toast("CSV downloaded");
 }
 
-Promise.all(["data.json", "forecast.json", "market.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata]) => {
-  D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); // years before 2012 have almost no data, so the range controls start at 2012
+Promise.all(["data.json", "forecast.json", "market.json", "quality.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata, qdata]) => {
+  D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); prepQuality(qdata); // years before 2012 have almost no data, so the range controls start at 2012
   YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);
   state.from = YEARS[0]; state.to = YEARS.at(-1);
   readHash();
@@ -484,7 +486,7 @@ Promise.all(["data.json", "forecast.json", "market.json"].map((u) => fetch(u).th
   $("insights").onclick = go;
   $("insights").onkeydown = (e) => { if (e.key === "Enter") go(e); };
 
-  initLab();
+  initLab(); initProducts();
 
   // brands & products
   $("brandClose").onclick = () => { state.brand = null; syncUI(); renderBrands(); };

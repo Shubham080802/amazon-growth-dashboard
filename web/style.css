@@ -214,11 +214,8 @@ th.sorted { color: var(--ink); }
 }
 
 /* ---------- executive brief & forecast lab ---------- */
-body[data-tab="brief"] #perfTop, body[data-tab="lab"] #perfTop,
-body[data-tab="sales"] #perfTop, body[data-tab="satisfaction"] #perfTop,
-body[data-tab="customers"] #perfTop, body[data-tab="brands"] #perfTop, body[data-tab="market"] #perfTop { display: none; }
-body[data-tab="brief"] .range, body[data-tab="lab"] .range, body[data-tab="market"] .range,
-body[data-tab="brief"] #presets, body[data-tab="lab"] #presets, body[data-tab="market"] #presets { display: none; }
+body:not([data-tab="overview"]) #perfTop { display: none; }
+body:is([data-tab="brief"], [data-tab="lab"], [data-tab="market"], [data-tab="products"], [data-tab="quality"]) :is(.range, #presets) { display: none; }
 .sect { font-size: 13px; font-weight: 600; color: var(--ink2); letter-spacing: .02em; text-transform: uppercase; margin: 4px 0 10px; }
 .verdict { padding: 26px 28px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: center; }
 .verdict h2 { font-size: clamp(24px, 3.4vw, 36px); font-weight: 750; letter-spacing: -.025em; line-height: 1.15; margin-bottom: 10px; }
@@ -304,3 +301,30 @@ td .sub2 { display: block; color: var(--muted); font-size: 12px; }
 .cs-k { color: var(--muted); } .cs-sub { color: var(--ink2); font-size: 13px; } .strip .linkbtn { margin-left: auto; }
 .fresh table th, .fresh table td { padding: 12px 18px; } .fresh { margin: 0 -20px -12px; }
 @media (max-width: 700px) { .strip .linkbtn { margin-left: 0; } .strip { gap: 8px 18px; } }
+
+/* ---------- product explorer, data quality, extra grids ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.tiles-5 { grid-template-columns: repeat(5, 1fr); }
+.px-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 12px; }
+.px-controls input[type=search] { flex: 1 1 280px; width: auto; max-width: none; }
+.px-controls select { background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-weight: 600; max-width: 100%; }
+.px-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sub-h { margin: 18px 0 6px; font-size: 14px; font-weight: 650; color: var(--ink2); }
+.notes-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--ink2); font-size: 14px; } .notes-list b { color: var(--ink); }
+.theme-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.theme-head .note { margin: 0; }
+.simlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.simbtn { text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 10px 12px; background: var(--page); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; gap: 4px; }
+.simbtn:hover { border-color: var(--c1); } .simbtn b { font-size: 13px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .simbtn span { font-size: 12.5px; color: var(--ink2); }
+td.pt { max-width: 440px; } td.pt b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr.sel-row td { background: var(--blue-soft); } .up-t { color: var(--good); } .down-t { color: var(--bad); }
+td.wrap { white-space: normal; min-width: 260px; } .more { text-align: center; padding: 14px 0 4px; }
+@media (max-width: 900px) { .grid3 { grid-template-columns: 1fr; } .tiles-5 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .tiles-5 { grid-template-columns: 1fr 1fr; } }
+
+.dotk { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: baseline; }
+
+/* segmented controls never push the page wider than the screen */
+.seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .seg::-webkit-scrollbar { display: none; }
+.theme-head > * { min-width: 0; max-width: 100%; }
+@media (max-width: 560px) { .seg button { padding: 6px 10px; font-size: 13px; } }

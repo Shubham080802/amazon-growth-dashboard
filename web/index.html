@@ -62,11 +62,13 @@
       <button role="tab" data-tab="brief" class="active">Executive brief</button>
       <button role="tab" data-tab="market">Market &amp; company</button>
       <button role="tab" data-tab="lab">Forecast lab</button>
+      <button role="tab" data-tab="products">Product explorer</button>
       <button role="tab" data-tab="overview">Performance</button>
       <button role="tab" data-tab="sales">Sales</button>
       <button role="tab" data-tab="satisfaction">Satisfaction</button>
       <button role="tab" data-tab="customers">Customers</button>
-      <button role="tab" data-tab="brands">Brands &amp; products</button>
+      <button role="tab" data-tab="brands">Brands</button>
+      <button role="tab" data-tab="quality">Data quality</button>
     </nav>
     <div class="presets" id="presets" role="group" aria-label="Quick year ranges">
       <button type="button" class="chipbtn" data-p="all">All years</button>
@@ -193,6 +195,7 @@
         <div><h3>Segment scorecard</h3><p>Every brand, price band and top product on one page. Click a row to open it in the Forecast lab.</p></div>
         <div class="presets" id="scFilter" role="group" aria-label="Segment type">
           <button type="button" class="chipbtn on" data-k="all">All</button>
+          <button type="button" class="chipbtn" data-k="type">Product types</button>
           <button type="button" class="chipbtn" data-k="brand">Brands</button>
           <button type="button" class="chipbtn" data-k="band">Price bands</button>
           <button type="button" class="chipbtn" data-k="product">Products</button>
@@ -234,6 +237,14 @@
     </article>
 
     <section>
+      <h2 class="sect">Where Amazon's sales come from</h2>
+      <div class="grid2">
+        <article class="card"><header><h3>Net sales by product and service group</h3><p id="mixSub"></p></header><div class="plot h-lg" id="c-amz-mix"></div></article>
+        <article class="card"><header><h3>Latest quarter and growth</h3><p>Each group's net sales, share of the total and growth vs the same quarter a year earlier.</p></header><div class="tablewrap"><table id="mixTable"></table></div></article>
+      </div>
+    </section>
+
+    <section>
       <h2 class="sect">Amazon: outlook</h2>
       <div class="tiles tiles-4" id="amzFcTiles"></div>
     </section>
@@ -252,11 +263,21 @@
       <article class="card"><header><h3>Appliance producer prices</h3><p>Index, January 2020 = 100. Manufacturers' and retailers' prices.</p></header><div class="plot" id="c-mkt-ppi"></div></article>
     </div>
 
+    <section>
+      <h2 class="sect">Demand drivers for appliances</h2>
+      <div class="tiles tiles-4" id="drvTiles"></div>
+    </section>
+    <div class="grid3">
+      <article class="card"><header><h3>Housing starts</h3><p>New homes started, thousands a year.</p></header><div class="plot sm" id="c-drv-house"></div></article>
+      <article class="card"><header><h3>30-year mortgage rate</h3><p>Monthly average, percent.</p></header><div class="plot sm" id="c-drv-rate"></div></article>
+      <article class="card"><header><h3>Consumer sentiment</h3><p>University of Michigan index.</p></header><div class="plot sm" id="c-drv-sent"></div></article>
+    </div>
+
     <article class="card">
       <header><h3>Why the category forecast was not stretched to today</h3>
-        <p>We tested whether these public indicators could stand in for the missing 2023 to 2026 category data, using the years where we have both.</p></header>
+        <p>We tested whether any of these public indicators could stand in for the missing April 2023 to 2026 category data, using only the years where we have both. The test is deliberately strict: whole calendar years, robustness checks, a correction for trying many indicators, and one real out-of-sample check on January to March 2023, which is in the data but was not used to fit.</p></header>
       <div class="tablewrap"><table id="bridge"></table></div>
-      <p class="note">None of them reliably tracked the category's growth, so extending the category series with them would be guesswork presented as data. The category forecasts therefore stay anchored to the last real observation (March 2023) and say so. The pipeline rebuilds in about three minutes when a newer review dataset is published.</p>
+      <p class="note" id="bridgeNote"></p>
     </article>
     <p class="note">Sources: <a href="https://www.sec.gov/edgar/sec-api-documentation">SEC EDGAR</a> (Amazon filings), <a href="https://fred.stlouisfed.org/">FRED</a> republishing U.S. Census Bureau and BLS data, and <a href="https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results">Amazon's Q2 2026 earnings release</a>. Segment detail and guidance were transcribed from that release by hand.</p>
   </div>
@@ -365,18 +386,102 @@
     </article>
   </div>
 
+  <div class="panel" id="tab-products">
+    <article class="card">
+      <header><h3>Product explorer</h3><p id="pxIntro">Loading…</p></header>
+      <div class="px-controls">
+        <input type="search" id="pxSearch" placeholder="Search a product, brand or ASIN" aria-label="Search products">
+        <select id="pxType" aria-label="Product type"></select>
+        <select id="pxSort" aria-label="Sort by"></select>
+      </div>
+      <div class="presets" id="pxStage" role="group" aria-label="Lifecycle stage">
+        <button type="button" class="chipbtn on" data-s="">All stages</button>
+        <button type="button" class="chipbtn" data-s="Growing">Growing</button>
+        <button type="button" class="chipbtn" data-s="Steady">Steady</button>
+        <button type="button" class="chipbtn" data-s="Declining">Declining</button>
+        <button type="button" class="chipbtn" data-s="New">New</button>
+        <button type="button" class="chipbtn" data-s="Faded">Faded</button>
+      </div>
+    </article>
+
+    <article class="card" id="pxDetail" hidden>
+      <header class="row-head">
+        <div><h3 id="pxTitle"></h3><p id="pxMeta" class="px-meta"></p></div>
+        <button type="button" class="chipbtn" id="pxClose">✕ Close</button>
+      </header>
+      <div class="tiles tiles-5 inline" id="pxTiles"></div>
+      <h4 class="sub-h">What this tells you</h4>
+      <ul class="notes-list" id="pxNotes"></ul>
+      <div class="grid2">
+        <div><h4 class="sub-h">Reviews per month</h4><div class="plot sm" id="c-px-vol"></div></div>
+        <div><h4 class="sub-h">Average rating (6-month)</h4><div class="plot sm" id="c-px-rating"></div></div>
+      </div>
+      <div class="grid2">
+        <div><h4 class="sub-h">Unhappy reviews, 1–2★ (6-month)</h4><div class="plot sm" id="c-px-neg"></div></div>
+        <div><h4 class="sub-h">How much of its life is behind it</h4><div class="plot sm" id="c-px-life"></div></div>
+      </div>
+      <div class="theme-head">
+        <div><h4 class="sub-h">What customers talk about</h4><p class="note" id="pxThemeSub"></p></div>
+        <div class="seg" id="pxThemeSeg"><button type="button" data-v="recent" class="on">Recent vs earlier</button><button type="button" data-v="all">All reviews</button><button type="button" data-v="neg">Unhappy reviews</button></div>
+      </div>
+      <div class="plot h-md" id="c-px-themes"></div>
+      <h4 class="sub-h">Similar products (same type)</h4>
+      <div class="simlist" id="pxSimilar"></div>
+      <p class="note">Themes are counted with a fixed keyword list (see docs/MODEL.md); no review text is shown. Reviews measure engagement, which follows sales with a lag, so read growth as a signal, not a sales figure.</p>
+    </article>
+
+    <article class="card">
+      <header><h3>Product types</h3><p>The whole category by type. Click a type to filter the products below.</p></header>
+      <div class="tablewrap"><table id="pxTypes"></table></div>
+    </article>
+
+    <article class="card">
+      <header class="row-head"><div><h3>Products</h3><p id="pxCount"></p></div></header>
+      <div class="tablewrap"><table id="pxList"></table></div>
+      <div class="more"><button type="button" class="chipbtn" id="pxMore">Show 25 more</button></div>
+    </article>
+  </div>
+
+  <div class="panel" id="tab-quality">
+    <div class="tiles tiles-4" id="qlTiles"></div>
+    <div class="grid2">
+      <article class="card">
+        <header><h3>Why filling the gaps matters</h3><p>Year-over-year growth of the sales proxy. Amazon stops listing prices for older products, so using listed prices alone overstated the boom years and understated the recent decline.</p></header>
+        <div class="plot" id="c-ql-growth"></div>
+      </article>
+      <article class="card">
+        <header><h3>Share of the sales proxy resting on estimated prices</h3><p>Higher in older years, because older products lose their listed price.</p></header>
+        <div class="plot" id="c-ql-est"></div>
+      </article>
+    </div>
+    <article class="card">
+      <header><h3>What was filled, and how</h3><p>Nothing is filled silently; every filled value is flagged and every method is tested on data where the answer is known.</p></header>
+      <ul class="notes-list" id="qlFills"></ul>
+    </article>
+    <article class="card">
+      <header><h3>How accurate the price estimates are</h3><p>Tested on products whose real price is known, by the year the product launched.</p></header>
+      <div class="tablewrap"><table id="qlModel"></table></div>
+    </article>
+    <article class="card">
+      <header><h3>Consistency checks</h3><p>Run by scripts/validate_data.py every time the data is rebuilt.</p></header>
+      <div class="tablewrap"><table id="qlChecks"></table></div>
+    </article>
+  </div>
+
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <footer>
   <p>Data: <a href="https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023">Amazon Reviews 2023</a> (McAuley Lab, UC San Diego), Appliances category, 2.1M reviews.
-  <b>Sales is a proxy</b>: list price of each verified-purchase review, so it is a lower bound on true revenue.
+  <b>Sales is a proxy</b>: price of each verified-purchase review. Where Amazon lists no price (about a fifth of recent review value, more in older years) the price is estimated from similar products and flagged; see Data quality.
   Months after Mar 2023 are excluded because collection is incomplete there.</p>
 </footer>
 
 <script src="app.js"></script>
 <script src="lab.js"></script>
 <script src="market.js"></script>
+<script src="products.js"></script>
+<script src="quality.js"></script>
 </body>
 </html>

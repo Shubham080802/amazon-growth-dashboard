@@ -145,8 +145,33 @@ function renderMarket() {
     { ...m2, mode: "lines", name: "Appliance retailers", line: line(css("--c2"), 2.5), hovertemplate: "%{y:.1f}" },
   ], layout({ margin: { l: 8, r: 16, t: 28, b: 8 }, xaxis: { type: "date" }, yaxis: { tickformat: ".0f" } }));
 
+  // ---- where Amazon's sales come from
+  const mq = A.mix.quarters, mks = Object.keys(mq).sort(), GRP = Object.keys(mq[mks[0]].groups), lastK = mks.at(-1), yearK = mks.at(-5);
+  const grpColor = { "Online stores": css("--c1"), "Third-party seller services": css("--c2"), AWS: css("--c3"), "Advertising services": css("--c4"), "Subscription services": "#e87ba4", "Physical stores": "#8a94a6", Other: "#8a6fd6" };
+  $("mixSub").textContent = `Quarterly, ${qLabel(mks[0])} to ${qLabel(lastK)}, from Amazon's earnings releases. Every quarter reconciles exactly to the SEC filing.`;
+  draw("c-amz-mix", GRP.map((gname) => ({ x: mks.map(qLabel), y: mks.map((k) => mq[k].groups[gname] / 1e3), type: "bar", name: gname, marker: { color: grpColor[gname] }, hovertemplate: "$%{y:.1f}B" })),
+    layout({ barmode: "stack", bargap: 0.25, margin: { l: 8, r: 8, t: 36, b: 8 }, legend: { y: 1.2 }, xaxis: { type: "category" }, yaxis: { tickprefix: "$", ticksuffix: "B", tickformat: ".0f" } }));
+  const tot = (k) => sum(Object.values(mq[k].groups));
+  $("mixTable").innerHTML = `<thead><tr><th>Group</th><th class="n">${qLabel(lastK)}</th><th class="n">Share</th><th class="n">vs ${qLabel(yearK)}</th></tr></thead><tbody>` +
+    GRP.slice().sort((x, y) => mq[lastK].groups[y] - mq[lastK].groups[x]).map((gname) => `<tr><td><span class="dotk" style="background:${grpColor[gname]}"></span><b>${gname}</b></td><td class="n">${bn(mq[lastK].groups[gname])}</td><td class="n">${fmt.pct(mq[lastK].groups[gname] / tot(lastK), 0)}</td><td class="n">${deltaChip(mq[lastK].groups[gname] / mq[yearK].groups[gname] - 1, pctTxt)}</td></tr>`).join("") + "</tbody>";
+
+  // ---- demand drivers
+  const lastv = (id) => MK.fred[id].values.at(-1), yearAgo = (id) => MK.fred[id].values.at(-13);
+  const yoyLast = (id) => lastv(id) / yearAgo(id) - 1;
+  $("drvTiles").innerHTML = [
+    tile({ label: `Housing starts, ${fmt.month(MK.fred.HOUST.dates.at(-1))}`, value: fmt.int(lastv("HOUST")) + "K", delta: deltaChip(yoyLast("HOUST"), pctTxt), sub: "vs a year ago, annual rate" }),
+    tile({ label: `30-year mortgage rate, ${fmt.month(MK.fred.MORTGAGE30US.dates.at(-1))}`, value: lastv("MORTGAGE30US").toFixed(2) + "%", delta: deltaChip(lastv("MORTGAGE30US") - yearAgo("MORTGAGE30US"), numTxt(" pts", 2), false), sub: "vs a year ago" }),
+    tile({ label: `Consumer sentiment, ${fmt.month(MK.fred.UMCSENT.dates.at(-1))}`, value: lastv("UMCSENT").toFixed(1), delta: deltaChip(lastv("UMCSENT") - yearAgo("UMCSENT"), numTxt(" pts", 1)), sub: "vs a year ago" }),
+    tile({ label: `Household appliance production, ${fmt.month(MK.fred.IPG3352S.dates.at(-1))}`, value: pctTxt(yoyLast("IPG3352S")), sub: `durable-goods prices ${pctTxt(yoyLast("CUSR0000SAD"))}`, delta: "" }),
+  ].join("");
+  const since = (id, k) => { const s = MK.fred[id], i = s.dates.findIndex((d) => d >= "2015-01"); return { x: s.dates.slice(i), y: s.values.slice(i), k }; };
+  const small = (domId, id, color, fmtY, hov) => { const s = since(id); draw(domId, [{ x: s.x, y: s.y, mode: "lines", line: line(color, 2.4), hovertemplate: hov }], layout({ showlegend: false, margin: { l: 8, r: 12, t: 8, b: 8 }, xaxis: { type: "date" }, yaxis: { tickformat: fmtY } })); };
+  small("c-drv-house", "HOUST", css("--c1"), ".0f", "%{y:,.0f}K"); small("c-drv-rate", "MORTGAGE30US", css("--c2"), ".1f", "%{y:.2f}%"); small("c-drv-sent", "UMCSENT", css("--c4"), ".0f", "%{y:.1f}");
+
   // ---- the honest explanation of why the category forecast was not stretched
-  $("bridge").innerHTML = `<thead><tr><th>Public indicator</th><th class="n">Tracks category growth?</th><th class="n">Error with it</th><th class="n">Error of a naive guess</th><th class="n">Usable?</th></tr></thead><tbody>` +
-    MK.bridge_test.map((b) => { const good = b.corr >= 0.5 && b.mae_model < b.mae_naive;
-      return `<tr><td>${b.label}</td><td class="n">${b.corr >= 0 ? "+" : "−"}${Math.abs(b.corr).toFixed(2)}</td><td class="n">${b.mae_model.toFixed(3)}</td><td class="n">${b.mae_naive.toFixed(3)}</td><td class="n"><span class="badge ${good ? "good" : "bad"}">${good ? "Yes" : "No"}</span></td></tr>`; }).join("") + "</tbody>";
+  const BT = MK.bridge_test, vb = { Yes: '<span class="badge good">Usable</span>', Suggestive: '<span class="badge warn">Suggestive only</span>', No: '<span class="badge bad">No</span>' };
+  $("bridge").innerHTML = `<thead><tr><th>Public indicator</th><th class="n">Link to category growth</th><th class="n">Q1 2023 check: implied vs actual</th><th class="n">Verdict</th></tr></thead><tbody>` +
+    BT.rows.slice().sort((x, y) => Math.abs(y.r) - Math.abs(x.r)).map((b) => `<tr><td>${b.label}</td><td class="n">r ${b.r >= 0 ? "+" : "−"}${Math.abs(b.r).toFixed(2)}, p ${b.p.toFixed(3)}</td><td class="n">${b.q1_pred >= 0 ? "+" : "−"}${Math.abs(b.q1_pred * 100).toFixed(0)} pts vs ${b.q1_actual >= 0 ? "+" : "−"}${Math.abs(b.q1_actual * 100).toFixed(0)} pts</td><td class="n">${vb[b.verdict]}</td></tr>`).join("") + "</tbody>";
+  const best = BT.rows.slice().sort((x, y) => Math.abs(y.r) - Math.abs(x.r))[0];
+  $("bridgeNote").textContent = `Nothing passes. The strongest link is "${best.label.toLowerCase()}" (r ${best.r >= 0 ? "+" : "−"}${Math.abs(best.r).toFixed(2)} over ${best.n} years), but when applied to January to March 2023, which is in our data, it implied ${(best.q1_pred * 100).toFixed(0)} points of growth against an actual ${(best.q1_actual * 100).toFixed(0)}. Extending the category with it would present a guess as data, so the category forecasts stay anchored to the last real observation (March 2023) and say so. The pipeline rebuilds in about ten minutes when a newer review dataset is published.`;
 }
