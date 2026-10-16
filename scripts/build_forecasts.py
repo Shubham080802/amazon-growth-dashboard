@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 from forecast_engine import H, QS, forecast_series  # noqa: E402
 
 HIST_FROM = "2015-01"          # how much history the dashboard charts
-MONITORED = {"total", "brand", "band"}
+MONITORED = {"total", "brand", "band", "type", "family"}
 
 
 def _task(args):
