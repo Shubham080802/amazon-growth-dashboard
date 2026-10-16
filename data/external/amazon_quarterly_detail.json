@@ -1,0 +1,31 @@
+{
+  "note": "Quarterly net sales by product/service group and by segment, transcribed from Amazon's earnings releases (figures in $ millions, copied as printed). Each quarter's groups and segments are checked against the SEC consolidated figure by scripts/validate_data.py. Update by hand each quarter.",
+  "sources": {
+    "2024-07": "https://ir.aboutamazon.com/news-release/news-release-details/2025/Amazon-com-Announces-Third-Quarter-Results/default.aspx",
+    "2024-10": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Fourth-Quarter-Results/default.aspx",
+    "2025-01": "https://www.sec.gov/Archives/edgar/data/0001018724/000101872426000012/amzn-20260331xex991.htm",
+    "2025-04": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results",
+    "2025-07": "https://ir.aboutamazon.com/news-release/news-release-details/2025/Amazon-com-Announces-Third-Quarter-Results/default.aspx",
+    "2025-10": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Fourth-Quarter-Results/default.aspx",
+    "2026-01": "https://www.sec.gov/Archives/edgar/data/0001018724/000101872426000012/amzn-20260331xex991.htm",
+    "2026-04": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results"
+  },
+  "quarters": {
+    "2024-07": {"groups": {"Online stores": 61411, "Physical stores": 5228, "Third-party seller services": 37864, "Advertising services": 14331, "Subscription services": 11278, "AWS": 27452, "Other": 1313},
+                "segments": {"North America": {"sales": 95537, "opinc": 5663}, "International": {"sales": 35888, "opinc": 1301}, "AWS": {"sales": 27452, "opinc": 10447}}},
+    "2024-10": {"groups": {"Online stores": 75556, "Physical stores": 5579, "Third-party seller services": 47485, "Advertising services": 17288, "Subscription services": 11508, "AWS": 28786, "Other": 1590},
+                "segments": {"North America": {"sales": 115586, "opinc": 9256}, "International": {"sales": 43420, "opinc": 1315}, "AWS": {"sales": 28786, "opinc": 10632}}},
+    "2025-01": {"groups": {"Online stores": 57407, "Physical stores": 5533, "Third-party seller services": 36512, "Advertising services": 13921, "Subscription services": 11715, "AWS": 29267, "Other": 1312},
+                "segments": {"North America": {"sales": 92887, "opinc": 5841}, "International": {"sales": 33513, "opinc": 1017}, "AWS": {"sales": 29267, "opinc": 11547}}},
+    "2025-04": {"groups": {"Online stores": 61485, "Physical stores": 5595, "Third-party seller services": 40348, "Advertising services": 15694, "Subscription services": 12208, "AWS": 30873, "Other": 1499},
+                "segments": {"North America": {"sales": 100068, "opinc": 7517}, "International": {"sales": 36761, "opinc": 1494}, "AWS": {"sales": 30873, "opinc": 10160}}},
+    "2025-07": {"groups": {"Online stores": 67407, "Physical stores": 5578, "Third-party seller services": 42486, "Advertising services": 17703, "Subscription services": 12574, "AWS": 33006, "Other": 1415},
+                "segments": {"North America": {"sales": 106267, "opinc": 4789}, "International": {"sales": 40896, "opinc": 1199}, "AWS": {"sales": 33006, "opinc": 11434}}},
+    "2025-10": {"groups": {"Online stores": 82988, "Physical stores": 5855, "Third-party seller services": 52816, "Advertising services": 21317, "Subscription services": 13122, "AWS": 35579, "Other": 1709},
+                "segments": {"North America": {"sales": 127083, "opinc": 11472}, "International": {"sales": 50724, "opinc": 1040}, "AWS": {"sales": 35579, "opinc": 12465}}},
+    "2026-01": {"groups": {"Online stores": 64254, "Physical stores": 5785, "Third-party seller services": 41578, "Advertising services": 17243, "Subscription services": 13427, "AWS": 37587, "Other": 1645},
+                "segments": {"North America": {"sales": 104143, "opinc": 8267}, "International": {"sales": 39789, "opinc": 1424}, "AWS": {"sales": 37587, "opinc": 14161}}},
+    "2026-04": {"groups": {"Online stores": 70432, "Physical stores": 5794, "Third-party seller services": 46780, "Advertising services": 19809, "Subscription services": 13730, "AWS": 42232, "Other": 1829},
+                "segments": {"North America": {"sales": 116177, "opinc": 9123}, "International": {"sales": 42197, "opinc": 1717}, "AWS": {"sales": 42232, "opinc": 16621}}}
+  }
+}
