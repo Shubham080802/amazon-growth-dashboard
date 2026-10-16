@@ -1,84 +1,52 @@
-"""Turn the raw Amazon Reviews 2023 (Appliances) JSONL files into small dashboard tables.
+"""Monthly tables for the dashboard, from the review cache and the product master.
 
-Usage: python scripts/etl.py <raw_dir> <out_dir>
+Sales proxy = price of each verified-purchase review. `sales` uses the completed price (observed where Amazon
+lists one, otherwise the validated estimate from build_products.py); `sales_obs` uses observed prices only, and
+`est_share` is the fraction of `sales` that rests on estimated prices, so nothing is hidden.
+
+Usage: python scripts/etl.py data      (run build_products.py and build_reviews.py first)
 """
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
-raw, out = Path(sys.argv[1]), Path(sys.argv[2])
-out.mkdir(exist_ok=True)
+out = Path(sys.argv[1])
+m = pd.read_csv(out / "products_master.csv.gz", usecols=["parent_asin", "title", "brand", "price", "price_obs"])
+r = pd.read_parquet(out / "reviews_lean.parquet")
+r["price"] = m["price"].to_numpy()[r["p"]]
+r["price_obs"] = m["price_obs"].to_numpy()[r["p"]]
+r["brand"] = m["brand"].to_numpy()[r["p"]]
+r["sales"] = np.where(r["ver"] == 1, r["price"], 0.0)
+r["sales_obs"] = np.where(r["ver"] == 1, np.nan_to_num(r["price_obs"]), 0.0)
+r["month_ts"] = pd.to_datetime({"year": r["month"] // 12, "month": r["month"] % 12 + 1, "day": 1})
+r["is_new"] = r["month"] == r.groupby("uid")["month"].transform("min")
 
-# --- products -------------------------------------------------------------
-meta = pd.read_json(raw / "meta_Appliances.jsonl", lines=True)
-products = pd.DataFrame(
-    {
-        "parent_asin": meta["parent_asin"],
-        "title": meta["title"],
-        "brand": meta["store"].fillna("Unknown"),
-        "price": pd.to_numeric(meta["price"], errors="coerce"),
-    }
-)
-price = products.set_index("parent_asin")["price"]
-brand = products.set_index("parent_asin")["brand"]
-
-# --- reviews (text columns dropped while streaming) ------------------------
-cols = ["rating", "parent_asin", "user_id", "timestamp", "helpful_vote", "verified_purchase"]
-parts = []
-for chunk in pd.read_json(raw / "Appliances.jsonl", lines=True, chunksize=250_000):
-    parts.append(chunk[cols])
-rev = pd.concat(parts, ignore_index=True)
-rev["date"] = pd.to_datetime(rev["timestamp"], unit="ms")
-rev["month"] = rev["date"].dt.to_period("M").dt.to_timestamp()
-rev["price"] = rev["parent_asin"].map(price)
-rev["brand"] = rev["parent_asin"].map(brand).fillna("Unknown")
-# Review-implied sales: price of each verified-purchase review (a lower-bound proxy
-# for revenue, since only a fraction of buyers leave a review).
-rev["sales"] = rev["price"].where(rev["verified_purchase"], 0).fillna(0)
-rev["first_month"] = rev.groupby("user_id")["month"].transform("min")
-rev["is_new_customer"] = rev["month"] == rev["first_month"]
-
-# Monthly volume collapses after Mar-2023 (~$1.4M -> $0.2M by Aug-2023), which is a
-# collection artefact at the end of the dataset snapshot, not real demand. Keep complete months.
-rev = rev[rev["month"] < "2023-04-01"]
-
-# --- monthly table ---------------------------------------------------------
-g = rev.groupby("month")
-monthly = pd.DataFrame(
-    {
-        "orders": g.size(),
-        "sales": g["sales"].sum(),
-        "avg_rating": g["rating"].mean(),
-        "pct_positive": g["rating"].apply(lambda s: (s >= 4).mean()),
-        "pct_negative": g["rating"].apply(lambda s: (s <= 2).mean()),
-        "customers": g["user_id"].nunique(),
-        "new_customers": g["is_new_customer"].sum(),
-        "verified_share": g["verified_purchase"].mean(),
-    }
-).reset_index()
+g = r.groupby("month_ts")
+monthly = pd.DataFrame({
+    "orders": g.size(), "sales": g["sales"].sum(), "sales_obs": g["sales_obs"].sum(),
+    "avg_rating": g["rating"].mean(), "pct_positive": g["rating"].apply(lambda s: (s >= 4).mean()),
+    "pct_negative": g["rating"].apply(lambda s: (s <= 2).mean()),
+    "customers": g["uid"].nunique(), "new_customers": g["is_new"].sum(), "verified_share": g["ver"].mean(),
+}).reset_index().rename(columns={"month_ts": "month"})
+monthly["est_share"] = 1 - monthly["sales_obs"] / monthly["sales"].replace(0, np.nan)
 monthly.to_csv(out / "monthly.csv", index=False)
 
-# --- monthly x rating (for stacked satisfaction chart) ---------------------
-mr = rev.groupby(["month", rev["rating"].astype(int)]).size().rename("n").reset_index()
+mr = r.groupby(["month_ts", "rating"]).size().rename("n").reset_index().rename(columns={"month_ts": "month"})
 mr.to_csv(out / "monthly_rating.csv", index=False)
 
-# --- brand x month (top brands only) ---------------------------------------
-top = rev[rev["brand"] != "Unknown"].groupby("brand").size().nlargest(25).index
-bm = (
-    rev[rev["brand"].isin(top)]
-    .groupby(["month", "brand"])
-    .agg(orders=("rating", "size"), sales=("sales", "sum"), rating_sum=("rating", "sum"))
-    .reset_index()
-)
+top = r[r["brand"] != "Unknown"].groupby("brand").size().nlargest(25).index
+bm = (r[r["brand"].isin(top)].groupby(["month_ts", "brand"])
+      .agg(orders=("rating", "size"), sales=("sales", "sum"), rating_sum=("rating", "sum")).reset_index()
+      .rename(columns={"month_ts": "month"}))
 bm.to_csv(out / "brand_monthly.csv", index=False)
 
-# --- product leaderboard ---------------------------------------------------
-pg = rev.groupby("parent_asin").agg(
-    orders=("rating", "size"), sales=("sales", "sum"), avg_rating=("rating", "mean")
-)
-pg = pg[pg["orders"] >= 50].join(products.set_index("parent_asin")[["title", "brand", "price"]])
-pg.reset_index().nlargest(2000, "orders").to_csv(out / "products.csv", index=False)
+pg = r.groupby("p").agg(orders=("rating", "size"), sales=("sales", "sum"), avg_rating=("rating", "mean"))
+pg = pg[pg["orders"] >= 50].nlargest(2000, "orders")
+prod = m.iloc[pg.index][["parent_asin", "title", "brand", "price", "price_obs"]].reset_index(drop=True).join(pg.reset_index(drop=True))
+prod["price_estimated"] = prod["price_obs"].isna().astype(int)
+prod.drop(columns="price_obs").to_csv(out / "products.csv", index=False)
 
-print(f"reviews={len(rev):,} products={len(products):,} months={len(monthly)}")
-print(monthly.tail(3).to_string())
+print(f"reviews={len(r):,} months={len(monthly)} estimated-price share of all sales={1 - monthly['sales_obs'].sum() / monthly['sales'].sum():.1%}")
+print(monthly[["orders", "sales", "sales_obs", "est_share"]].tail(3).round(3).to_string())
