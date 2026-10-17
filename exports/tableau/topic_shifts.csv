@@ -1,0 +1,8 @@
+product_type,topic,direction,share_prior_12m,share_last_12m,change_points,mentions,z_score
+Ice Makers,Durability & reliability,Rising,0.1629,0.2306,6.77,6679,19.8
+Freezer Parts & Accessories,Durability & reliability,Rising,0.0885,0.1363,4.78,233,4.4
+Ice Makers,Service & returns,Rising,0.1298,0.1773,4.75,5135,15.3
+Range Hoods,Service & returns,Rising,0.0932,0.129,3.58,515,5.4
+Ice Makers,Value for money,Rising,0.1709,0.2057,3.48,5959,10.4
+Ice Makers,Noise,Rising,0.2023,0.2299,2.76,6659,7.8
+Coffee Machine Accessories,Fit & compatibility,Rising,0.1831,0.2037,2.06,9065,7.7

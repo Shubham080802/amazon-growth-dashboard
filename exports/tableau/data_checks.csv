@@ -1,0 +1,33 @@
+check,result,detail
+Published data files are valid JSON with no NaN or infinite values,pass,all files clean
+Review counts agree: raw cache = monthly table = total segment,pass,"2,072,794 reviews in all three"
+Every review lands in exactly one family segment,pass,"sum of family segments = 2,072,794 vs total 2,072,794"
+Every review lands in exactly one band segment,pass,"sum of band segments = 2,072,794 vs total 2,072,794"
+Type segments never exceed the total,pass,"2,059,126 of 2,072,794 reviews sit in a named type (the rest are in small types)"
+No missing months in the category series,pass,135 consecutive months
+Sales proxy: completed is never below observed-only,pass,holds for every month
+No product is left without a price,pass,"47,601 of 94,327 prices are estimated and flagged"
+Price model is accurate enough to use,pass,"R² 0.805, median error on brand-by-type totals 8.9%, bias -0.5%"
+Price model is unbiased across product ages,pass,largest bias for any launch cohort: +9.5%
+Share of the sales proxy that rests on estimated prices is disclosed,pass,"41.3% over all months, 21.0% in the last 12 months"
+Amazon revenue mix reconciles to the SEC filing in every quarter,pass,"8 quarters: product groups, segments and operating income all match the SEC totals"
+Amazon quarterly series has no missing quarters,pass,"58 consecutive quarters, 2012-01 to 2026-04"
+Amazon quarterly gaps filled by accounting identities,pass,1 cell(s) still empty (a change in how capital spending is reported)
+Every derived Amazon quarter is traceable,pass,57 values derived as year-to-date differences (list in data/external/amazon_quarterly_derived.json)
+Forecasts are non-negative and their ranges are ordered,pass,187 forecasts checked
+80% ranges would have held up in backtests,pass,average backtest coverage 84% (target 80%)
+Product explorer is complete and consistent,pass,"10,376 products; review counts in the detail files equal the index (1,683,007)"
+Product explorer coverage,pass,81.2% of all reviews belong to a listed product (30+ reviews)
+Product-age shares add up to 100% in every year,pass,11 periods checked
+Every product sits in exactly one launch cohort,pass,"78,233 products in 2012+ cohorts, 15,425 legacy (before 2012), 669 without a usable launch date"
+Cumulative reviews per product never decrease with age,pass,all cohort curves are non-decreasing
+Hit rates are ordered (10+ >= 50+ >= 200+ reviews),pass,holds for every cohort
+Time-to-peak histograms match their product counts,pass,holds for every cohort
+Reviews before the listed launch date are rare,pass,5.6% of reviews pre-date the listed launch (counted as launch month)
+Topic rates are valid shares for every period,pass,12 topics x 9 periods
+"Only large, clear topic shifts are listed",pass,"7 rising, 0 fading, each with 40+ mentions, 2+ points and z >= 4"
+The previous-build snapshot is usable,pass,"46 segments, built 2026-10-15"
+Every element the scripts use exists on the page,pass,150 elements referenced
+Every tab has a panel,pass,"6 tabs in the menu, 7 panels (the extra one is About the data)"
+Every Tableau table is documented,pass,"18 tables, each with a data-dictionary entry"
+The Tableau export gives the same answers as the dashboard's own rules,pass,"72 segments compared (suggested action, chance of growth, last and expected 12-month totals)"

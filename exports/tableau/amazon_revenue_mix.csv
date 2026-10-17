@@ -1,0 +1,57 @@
+quarter_start,quarter,group,net_sales
+2024-07-01,Q3 2024,Online stores,61411
+2024-07-01,Q3 2024,Physical stores,5228
+2024-07-01,Q3 2024,Third-party seller services,37864
+2024-07-01,Q3 2024,Advertising services,14331
+2024-07-01,Q3 2024,Subscription services,11278
+2024-07-01,Q3 2024,AWS,27452
+2024-07-01,Q3 2024,Other,1313
+2024-10-01,Q4 2024,Online stores,75556
+2024-10-01,Q4 2024,Physical stores,5579
+2024-10-01,Q4 2024,Third-party seller services,47485
+2024-10-01,Q4 2024,Advertising services,17288
+2024-10-01,Q4 2024,Subscription services,11508
+2024-10-01,Q4 2024,AWS,28786
+2024-10-01,Q4 2024,Other,1590
+2025-01-01,Q1 2025,Online stores,57407
+2025-01-01,Q1 2025,Physical stores,5533
+2025-01-01,Q1 2025,Third-party seller services,36512
+2025-01-01,Q1 2025,Advertising services,13921
+2025-01-01,Q1 2025,Subscription services,11715
+2025-01-01,Q1 2025,AWS,29267
+2025-01-01,Q1 2025,Other,1312
+2025-04-01,Q2 2025,Online stores,61485
+2025-04-01,Q2 2025,Physical stores,5595
+2025-04-01,Q2 2025,Third-party seller services,40348
+2025-04-01,Q2 2025,Advertising services,15694
+2025-04-01,Q2 2025,Subscription services,12208
+2025-04-01,Q2 2025,AWS,30873
+2025-04-01,Q2 2025,Other,1499
+2025-07-01,Q3 2025,Online stores,67407
+2025-07-01,Q3 2025,Physical stores,5578
+2025-07-01,Q3 2025,Third-party seller services,42486
+2025-07-01,Q3 2025,Advertising services,17703
+2025-07-01,Q3 2025,Subscription services,12574
+2025-07-01,Q3 2025,AWS,33006
+2025-07-01,Q3 2025,Other,1415
+2025-10-01,Q4 2025,Online stores,82988
+2025-10-01,Q4 2025,Physical stores,5855
+2025-10-01,Q4 2025,Third-party seller services,52816
+2025-10-01,Q4 2025,Advertising services,21317
+2025-10-01,Q4 2025,Subscription services,13122
+2025-10-01,Q4 2025,AWS,35579
+2025-10-01,Q4 2025,Other,1709
+2026-01-01,Q1 2026,Online stores,64254
+2026-01-01,Q1 2026,Physical stores,5785
+2026-01-01,Q1 2026,Third-party seller services,41578
+2026-01-01,Q1 2026,Advertising services,17243
+2026-01-01,Q1 2026,Subscription services,13427
+2026-01-01,Q1 2026,AWS,37587
+2026-01-01,Q1 2026,Other,1645
+2026-04-01,Q2 2026,Online stores,70432
+2026-04-01,Q2 2026,Physical stores,5794
+2026-04-01,Q2 2026,Third-party seller services,46780
+2026-04-01,Q2 2026,Advertising services,19809
+2026-04-01,Q2 2026,Subscription services,13730
+2026-04-01,Q2 2026,AWS,42232
+2026-04-01,Q2 2026,Other,1829

@@ -10,3 +10,6 @@ __pycache__/
 data/products_master.csv.gz
 data/reviews_lean.parquet
 data/product_cohort.csv.gz
+
+# large Tableau table, created by scripts/export_tableau.py
+exports/tableau/product_monthly.csv
