@@ -150,6 +150,29 @@ tabs = re.findall(r'data-tab="([a-z]+)"', html)
 panels = set(re.findall(r'id="tab-([a-z]+)"', html))
 check("Every tab has a panel", all(t_ in panels for t_ in tabs), f"{len(tabs)} tabs in the menu, {len(panels)} panels (the extra one is About the data)")
 
+
+# ---- 9. the Tableau export agrees with the dashboard
+import shutil
+import subprocess
+tab = ROOT / "exports" / "tableau"
+if (tab / "segments.csv").exists():
+    docs = (ROOT / "docs" / "TABLEAU.md").read_text()
+    undocumented = [f.name for f in tab.glob("*.csv") if f"`{f.name}`" not in docs]
+    check("Every Tableau table is documented", not undocumented, f"{len(list(tab.glob('*.csv')))} tables, each with a data-dictionary entry" if not undocumented else f"missing: {undocumented}")
+    if shutil.which("node"):
+        js = json.loads(subprocess.run(["node", str(ROOT / "scripts" / "rules_probe.js")], capture_output=True, text=True, check=True).stdout)
+        sc = pd.read_csv(tab / "segments.csv").set_index("segment_id")
+        amap = {"invest": "Invest", "fix": "Fix quality", "risk": "Risk", "watch": "Watch"}
+        close = lambda a, b: abs(a - b) <= max(1e-6, abs(a) * 1e-5)
+        diffs = [r["id"] for r in js if r["id"] not in sc.index or amap[r["action"]] != sc.at[r["id"], "suggested_action"] or not close(r["pGrowth"], sc.at[r["id"], "chance_of_growth"])
+                 or not close(r["last12"], sc.at[r["id"], "last_12m"]) or not close(r["fc12"], sc.at[r["id"], "expected_next_12m"])]
+        check("The Tableau export gives the same answers as the dashboard's own rules", not diffs and len(js) == len(sc),
+              f"{len(js)} segments compared (suggested action, chance of growth, last and expected 12-month totals)" if not diffs else f"differences in: {diffs[:5]}")
+    else:
+        check("The Tableau export gives the same answers as the dashboard's own rules", False, "Node is not installed, so the dashboard's rules could not be run for comparison", warn=True)
+else:
+    check("The Tableau export has been generated", False, "run python scripts/export_tableau.py", warn=True)
+
 # ---- freshness (informational)
 fresh = {"category reviews": fc["meta"]["last_month"], "Amazon filings": mk["meta"]["amazon_latest_quarter"], "market data": mk["fred"]["RSNSR"]["dates"][-1]}
 
@@ -161,6 +184,8 @@ annual = [{"year": int(y), "completed": float(r.sales), "observed": float(r.sale
 out = {"built": pd.Timestamp.today().strftime("%Y-%m-%d"), "checks": checks, "freshness": fresh, "imputation": rep, "annual": annual,
        "totals": {"reviews": lean_n, "products": rep["products"]}}
 (W / "quality.json").write_text(json.dumps(out, separators=(",", ":"), allow_nan=False))
+if (ROOT / "exports" / "tableau").exists():
+    pd.DataFrame([{"check": c["name"], "result": c["status"], "detail": c["detail"]} for c in checks]).to_csv(ROOT / "exports" / "tableau" / "data_checks.csv", index=False)
 fails = [c for c in checks if c["status"] == "fail"]
 for c in checks:
     print({"pass": "PASS", "warn": "WARN", "fail": "FAIL"}[c["status"]], "-", c["name"], "|", c["detail"])
