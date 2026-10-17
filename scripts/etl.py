@@ -5,6 +5,7 @@ lists one, otherwise the validated estimate from build_products.py); `sales_obs`
 `est_share` is the fraction of `sales` that rests on estimated prices, so nothing is hidden.
 
 Usage: python scripts/etl.py data      (run build_products.py and build_reviews.py first)
+Writes data/monthly.csv and data/monthly_rating.csv.
 """
 import sys
 from pathlib import Path
@@ -35,18 +36,6 @@ monthly.to_csv(out / "monthly.csv", index=False)
 
 mr = r.groupby(["month_ts", "rating"]).size().rename("n").reset_index().rename(columns={"month_ts": "month"})
 mr.to_csv(out / "monthly_rating.csv", index=False)
-
-top = r[r["brand"] != "Unknown"].groupby("brand").size().nlargest(25).index
-bm = (r[r["brand"].isin(top)].groupby(["month_ts", "brand"])
-      .agg(orders=("rating", "size"), sales=("sales", "sum"), rating_sum=("rating", "sum")).reset_index()
-      .rename(columns={"month_ts": "month"}))
-bm.to_csv(out / "brand_monthly.csv", index=False)
-
-pg = r.groupby("p").agg(orders=("rating", "size"), sales=("sales", "sum"), avg_rating=("rating", "mean"))
-pg = pg[pg["orders"] >= 50].nlargest(2000, "orders")
-prod = m.iloc[pg.index][["parent_asin", "title", "brand", "price", "price_obs"]].reset_index(drop=True).join(pg.reset_index(drop=True))
-prod["price_estimated"] = prod["price_obs"].isna().astype(int)
-prod.drop(columns="price_obs").to_csv(out / "products.csv", index=False)
 
 print(f"reviews={len(r):,} months={len(monthly)} estimated-price share of all sales={1 - monthly['sales_obs'].sum() / monthly['sales'].sum():.1%}")
 print(monthly[["orders", "sales", "sales_obs", "est_share"]].tail(3).round(3).to_string())

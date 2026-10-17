@@ -29,14 +29,10 @@ def cols(df, round_to=4):
 
 monthly = pd.read_csv(D / "monthly.csv", parse_dates=["month"])
 mrating = pd.read_csv(D / "monthly_rating.csv", parse_dates=["month"])
-brand_m = pd.read_csv(D / "brand_monthly.csv", parse_dates=["month"])
-products = pd.read_csv(D / "products.csv").head(100)
 
 payload = {
     "monthly": cols(monthly),
     "rating_mix": cols(mrating),
-    "brand_monthly": cols(brand_m),
-    "products": cols(products),
 }
 out = ROOT / "web" / "data.json"
 out.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False))
