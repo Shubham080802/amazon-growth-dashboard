@@ -27,6 +27,8 @@ Under key charts, **What am I looking at?** explains how to read the chart and w
 | [SEC EDGAR](https://www.sec.gov/edgar/sec-api-documentation) | Amazon quarterly financials | Q2 2026 | Amazon actuals and revenue outlook |
 | [Amazon Q2 2026 release](https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results) and earlier releases | revenue mix, segments, guidance | Q2 2026 | transcribed by hand; reconciled to the SEC filings |
 | [FRED](https://fred.stlouisfed.org/) (Census Bureau, BLS, Federal Reserve, Michigan, Freddie Mac) | e-commerce, retail, appliance prices and production, housing, mortgage rates, sentiment | Sep 2026 | market context |
+| [CPSC recalls](https://www.cpsc.gov/Recalls) | appliance safety recalls (matched from product names) | Sep 2026 | recent-activity panel only |
+| [ENERGY STAR](https://www.energystar.gov/productfinder/) certified-product lists | models by date available, brands launching since Apr 2023 (currently certified models only) | Oct 2026 | recent-activity panel only |
 
 **The category review data is the only source that is out of date.** Public market indicators do not reliably track its growth (11 tested strictly; see the Market tab), so the category series is not extended with them. Forecasts and cohorts are labelled "as of Mar 2023". Refresh and rebuild when a newer review dataset is published.
 
@@ -75,6 +77,7 @@ python scripts/build_topics.py data
 python scripts/export_web_data.py
 OMP_NUM_THREADS=1 python scripts/build_forecasts.py   # keeps the previous build for the "what changed" box
 python scripts/build_market_data.py                # needs internet (SEC, FRED)
+python scripts/build_recent_activity.py            # optional: CPSC recalls + ENERGY STAR launches -> web/recent.json (needs internet; falls back to its caches)
 python scripts/export_tableau.py                   # CSVs for Tableau (product_monthly.csv is large and not committed)
 python scripts/validate_data.py                    # fails loudly if anything is inconsistent (needs Node for the Tableau parity check)
 ```

@@ -77,6 +77,9 @@ Thresholds are adjustable in the dashboard.
 ## Scenario levers
 `sales x (1 + demand) x (1 + price)^(1 + elasticity)` and `orders x (1 + demand) x (1 + price)^elasticity`. Elasticity is an assumption entered by the user (default -1.5), not estimated from this data. The levers rescale the forecast; they are not a second model.
 
+## Recent activity (`scripts/build_recent_activity.py`)
+An additive panel on Market & company, built from two official public sources: CPSC appliance recalls (matched from product names into nine groups, first match wins) and ENERGY STAR certified models by date available. It writes only `web/recent.json` plus two small caches in `data/external/`, and nothing in the category data, forecasts or decision rules reads it. Limits: recalls are safety events, not sales or satisfaction; ENERGY STAR lists only currently certified models, so older years are understated and the recent years are the reliable part. The dashboard hides the panel if the file is missing.
+
 ## Known limits
 - Review activity is a proxy for sales; a promotion that drives reviews would look like demand.
 - Months after Mar 2023 are excluded because collection is incomplete.

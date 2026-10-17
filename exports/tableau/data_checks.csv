@@ -27,7 +27,10 @@ Reviews before the listed launch date are rare,pass,5.6% of reviews pre-date the
 Topic rates are valid shares for every period,pass,12 topics x 9 periods
 "Only large, clear topic shifts are listed",pass,"7 rising, 0 fading, each with 40+ mentions, 2+ points and z >= 4"
 The previous-build snapshot is usable,pass,"46 segments, built 2026-10-15"
-Every element the scripts use exists on the page,pass,150 elements referenced
+Every element the scripts use exists on the page,pass,158 elements referenced
 Every tab has a panel,pass,"6 tabs in the menu, 7 panels (the extra one is About the data)"
 Every Tableau table is documented,pass,"18 tables, each with a data-dictionary entry"
 The Tableau export gives the same answers as the dashboard's own rules,pass,"72 segments compared (suggested action, chance of growth, last and expected 12-month totals)"
+Recent recalls: counts are valid and the latest recall is dated,pass,"113 appliance recalls since 2016, latest 2026-09-10"
+Recent ENERGY STAR launches: series are complete,pass,"4,383 certified models launched since 2023-04, latest month 2026-10"
+Recent activity is kept apart from the forecast inputs,pass,shown on Market & company only; the category data and forecasts do not use it

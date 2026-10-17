@@ -53,6 +53,9 @@ Free-form forecasting through chat; real-time or streaming data; anything that c
 ---
 
 ## Smaller open items
+- [ ] **Google Trends test:** download interest-over-time CSVs for a few appliance terms by hand (no scraping) into `data/external/trends/` and run them through the same strict bridge test. Include only if they pass.
+- [ ] **Threads / social signal (optional):** counts only, official API only. Needs a Meta developer app and `threads_keyword_search` approval; untested without a token.
+- [ ] **Ask the dataset authors** (contact is on the dataset card) whether a newer release or a licence statement exists.
 - [ ] **Quarterly:** update `data/external/amazon_quarterly_detail.json` and the latest release file by hand after each Amazon earnings release, then run `python scripts/build_market_data.py`. Consider automating the transcription with a parser plus the existing SEC reconciliation as the safety net.
 - [ ] **If a newer review dataset appears:** run the rebuild order in the README, then re-run the bridge test (it may start to pass) and revisit the "as of March 2023" labels.
 - [ ] **Explainers:** add "What am I looking at?" to the remaining charts (satisfaction, lifecycle curves, market drivers).

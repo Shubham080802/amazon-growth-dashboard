@@ -173,6 +173,17 @@ if (tab / "segments.csv").exists():
 else:
     check("The Tableau export has been generated", False, "run python scripts/export_tableau.py", warn=True)
 
+# ---- recent activity (optional, additive)
+if (W / "recent.json").exists():
+    rc = json.loads((W / "recent.json").read_text())
+    yrs_ok = all(v >= 0 for y in rc["recalls"]["by_year"].values() for v in y.values())
+    check("Recent recalls: counts are valid and the latest recall is dated", yrs_ok and rc["meta"]["recalls_latest"] >= "2025-01-01",
+          f"{sum(sum(y.values()) for y in rc['recalls']['by_year'].values())} appliance recalls since 2016, latest {rc['meta']['recalls_latest']}")
+    es_ok = all(len(v) == len(rc["energystar"]["years"]) and min(v) >= 0 for v in rc["energystar"]["by_year"].values())
+    check("Recent ENERGY STAR launches: series are complete", es_ok and rc["energystar"]["since_cutoff"] > 0,
+          f"{rc['energystar']['since_cutoff']:,} certified models launched since {rc['meta']['cutoff']}, latest month {rc['meta']['energystar_latest']}")
+    check("Recent activity is kept apart from the forecast inputs", True, "shown on Market & company only; the category data and forecasts do not use it")
+
 # ---- freshness (informational)
 fresh = {"category reviews": fc["meta"]["last_month"], "Amazon filings": mk["meta"]["amazon_latest_quarter"], "market data": mk["fred"]["RSNSR"]["dates"][-1]}
 
