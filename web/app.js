@@ -384,7 +384,7 @@ function renderTable() {
 // ---------------------------------------------------------------- state, sync, URL
 const renderers = {
   overview: renderOverview, sales: renderSales, satisfaction: renderSatisfaction,
-  customers: renderCustomers, brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), products: () => renderProducts(), quality: () => renderQuality(), brands: () => renderBrands(),
+  customers: renderCustomers, brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), products: () => renderProducts(), lifecycle: () => renderLifecycle(), quality: () => renderQuality(), brands: () => renderBrands(),
 };
 
 const PRESETS = () => {
@@ -457,8 +457,8 @@ function downloadCsv() {
   toast("CSV downloaded");
 }
 
-Promise.all(["data.json", "forecast.json", "market.json", "quality.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata, qdata]) => {
-  D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); prepQuality(qdata); // years before 2012 have almost no data, so the range controls start at 2012
+Promise.all(["data.json", "forecast.json", "market.json", "quality.json", "cohorts.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata, qdata, cdata]) => {
+  D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); prepQuality(qdata); prepLifecycle(cdata); // years before 2012 have almost no data, so the range controls start at 2012
   YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);
   state.from = YEARS[0]; state.to = YEARS.at(-1);
   readHash();
@@ -486,7 +486,7 @@ Promise.all(["data.json", "forecast.json", "market.json", "quality.json"].map((u
   $("insights").onclick = go;
   $("insights").onkeydown = (e) => { if (e.key === "Enter") go(e); };
 
-  initLab(); initProducts();
+  initLab(); initProducts(); initLifecycle();
 
   // brands & products
   $("brandClose").onclick = () => { state.brand = null; syncUI(); renderBrands(); };

@@ -120,6 +120,7 @@ async function renderProductDetail(id) {
   notes.push(`<b>${p.st}.</b> ${STAGE_NOTE[p.st]}${growth != null ? ` (${pctTxt(growth)}; its type moved ${tg == null ? "n/a" : pctTxt(tg)}).` : ""}`);
   if (age >= 6) notes.push(`<b>Peak.</b> Review activity peaked around ${fmt.month(x[peakI])} at about ${peakRate.toFixed(1)} reviews a month; it now runs at ${nowRate.toFixed(1)} (${ofPeak == null ? "n/a" : fmt.pct(ofPeak, 0)} of peak).`);
   if (rCur != null && rPri != null) notes.push(`<b>Rating.</b> ${rCur.toFixed(2)}★ over the last 12 months, ${Math.abs(rCur - rPri) < 0.05 ? "unchanged" : (rCur > rPri ? "up " : "down ") + Math.abs(rCur - rPri).toFixed(2)} on the year before.`);
+  if (p.f12 != null && p.f12 >= 3 && p.p12 != null && p.cy) notes.push(`<b>Launch.</b> In its first 12 months it drew ${p.f12} reviews, more than ${Math.min(99, Math.round(p.p12 * 100))}% of the products launched in ${p.cy}.`);
   if (d.th) {
     const [nA, nN, nR, nP] = d.N, th = PX.meta.themes;
     if (nR >= 15 && nP >= 15) {

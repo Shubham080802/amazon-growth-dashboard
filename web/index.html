@@ -63,6 +63,7 @@
       <button role="tab" data-tab="market">Market &amp; company</button>
       <button role="tab" data-tab="lab">Forecast lab</button>
       <button role="tab" data-tab="products">Product explorer</button>
+      <button role="tab" data-tab="lifecycle">Product lifecycle</button>
       <button role="tab" data-tab="overview">Performance</button>
       <button role="tab" data-tab="sales">Sales</button>
       <button role="tab" data-tab="satisfaction">Satisfaction</button>
@@ -442,6 +443,63 @@
     </article>
   </div>
 
+  <div class="panel" id="tab-lifecycle">
+    <section class="card lcv" id="lcVerdict"></section>
+    <div class="tiles tiles-4" id="lcTiles"></div>
+    <article class="card">
+      <header class="row-head">
+        <div><h3>Where the reviews come from</h3><p>Each year's reviews, split by how old the product was when it was reviewed.</p></div>
+        <div class="seg" id="lcShareSeg"><button type="button" data-v="orders" class="on">Reviews</button><button type="button" data-v="sales">Sales proxy</button></div>
+      </header>
+      <div class="plot h-md" id="c-lc-share"></div>
+    </article>
+    <div class="grid2">
+      <article class="card">
+        <header class="row-head">
+          <div><h3>How launches build an audience</h3><p>Reviews per launched product by months since launch, for each launch year (newest darkest).</p></div>
+          <div class="seg" id="lcCurveSeg"><button type="button" data-v="mean" class="on">Average</button><button type="button" data-v="median">Typical (median)</button></div>
+        </header>
+        <div class="plot" id="c-lc-curve"></div>
+        <p class="note" id="lcCurveNote"></p>
+      </article>
+      <article class="card">
+        <header><h3>Are launches succeeding more often?</h3><p>Share of launched products reaching 10+ and 50+ reviews within their first year. The latest year only includes launches old enough to have a full year.</p></header>
+        <div class="plot" id="c-lc-hit"></div>
+      </article>
+    </div>
+    <div class="grid2">
+      <article class="card">
+        <header><h3>Do established products last?</h3><p>Of products with 10+ reviews in year one, the share still drawing reviews in the six months around each age. The bar is easier to clear in recent years, so compare with care.</p></header>
+        <div class="plot" id="c-lc-surv"></div>
+      </article>
+      <article class="card">
+        <header><h3>How quickly products peak</h3><p>Months from launch to peak review activity, for products with 50+ reviews in their first three years. Every cohort is judged over the same 36 months.</p></header>
+        <div class="plot" id="c-lc-peak"></div>
+      </article>
+    </div>
+    <div class="grid2">
+      <article class="card"><header><h3>Launch rating</h3><p>Average rating in a product's first 12 months, by launch year.</p></header><div class="plot sm" id="c-lc-rating"></div></article>
+      <article class="card"><header><h3>Unhappy reviews at launch</h3><p>Share of first-year reviews that are 1–2★.</p></header><div class="plot sm" id="c-lc-neg"></div></article>
+    </div>
+    <article class="card">
+      <header class="row-head">
+        <div><h3>Which types and brands depend on new products</h3><p>Last 12 months of reviews. Click a type to see its products.</p></div>
+        <div class="seg" id="lcGroupSeg"><button type="button" data-v="type" class="on">Types</button><button type="button" data-v="brand">Brands</button></div>
+      </header>
+      <div class="tablewrap"><table id="lcTable"></table></div>
+    </article>
+    <article class="card method">
+      <header><h3>How to read this</h3></header>
+      <ul>
+        <li><b>Age, not date.</b> Products are compared at the same number of months since launch. A cohort that has not reached an age is left out of that age's figure (never counted as zero); the 2022 and 2023 launch rows are partial.</li>
+        <li><b>Launch month</b> is Amazon's listed "date first available" (92% of products), otherwise the first review. About 6% of reviews pre-date the listed launch (variants merged under one listing) and are counted as launch month.</li>
+        <li><b>Same basis as the forecasts.</b> Everything runs on reviews through March 2023. Newer periods are not mixed in, because that would compare different things.</li>
+        <li><b>Survivorship.</b> Products Amazon has since removed may be missing, which can make older cohorts look healthier than they were.</li>
+        <li><b>Reviews are engagement, not sales,</b> and follow sales with a lag; a product type with more reviewers looks more popular than it is.</li>
+      </ul>
+    </article>
+  </div>
+
   <div class="panel" id="tab-quality">
     <div class="tiles tiles-4" id="qlTiles"></div>
     <div class="grid2">
@@ -483,5 +541,6 @@
 <script src="market.js"></script>
 <script src="products.js"></script>
 <script src="quality.js"></script>
+<script src="lifecycle.js"></script>
 </body>
 </html>
