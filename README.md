@@ -50,6 +50,9 @@ The method, including the forecasting model, decision rules, topics and cohorts,
 ## Roadmap
 A grounded Q&A agent (free-form questions through a language model, limited to the dashboard's own numbers) is planned but on hold; the plan, decisions needed and acceptance tests are in [docs/TODO.md](docs/TODO.md).
 
+## Use it in Tableau
+The model stays in Python; Tableau reads its results from tidy CSV files in `exports/tableau/` (18 tables: scorecard, segment history, forecasts, monitoring, products, topics, cohorts, Amazon results, market series and the data checks). Works in Tableau Desktop, Cloud, Server and Public. See [docs/TABLEAU.md](docs/TABLEAU.md) for how to connect, five starter views, the full data dictionary and a licence note. `validate_data.py` proves the export gives the same suggested actions and probabilities as the dashboard.
+
 ## Run it
 
 ```bash
@@ -72,7 +75,8 @@ python scripts/build_topics.py data
 python scripts/export_web_data.py
 OMP_NUM_THREADS=1 python scripts/build_forecasts.py   # keeps the previous build for the "what changed" box
 python scripts/build_market_data.py                # needs internet (SEC, FRED)
-python scripts/validate_data.py                    # fails loudly if anything is inconsistent
+python scripts/export_tableau.py                   # CSVs for Tableau (product_monthly.csv is large and not committed)
+python scripts/validate_data.py                    # fails loudly if anything is inconsistent (needs Node for the Tableau parity check)
 ```
 
 ## Deploy
