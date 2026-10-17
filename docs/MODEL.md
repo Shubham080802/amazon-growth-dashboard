@@ -38,6 +38,12 @@ Simulated paths use shocks drawn here with a fixed seed (statsmodels' built-in b
 ## Product lifecycle
 For every product with 30+ reviews: first and last review, peak (3-month average), reviews and rating in the last 12 months vs the 12 before, and a stage: New (first reviewed in the last year), Faded (no reviews in six months), Low activity (under 10 in the last year), Growing or Declining (25% or more change), otherwise Steady. Reviews follow sales with a lag and measure engagement, not units.
 
+## Topic trends (`scripts/build_topics.py`)
+Uses the same keyword lexicon. Category-wide, the share of each period's reviews (and of its unhappy reviews) that mention each topic. Within each product type, a topic is only listed as rising or fading if it has 40+ mentions in the latest 12 months, moved by 2+ points against the 12 before, and the difference is statistically clear (two-proportion z of at least 4, which also clears a Bonferroni correction for the 288 type-and-topic pairs tested). Most pairs fail this filter, so few shifts are listed; that is intended.
+
+## What changed since the previous build
+`build_forecasts.py` keeps the previous forecast file as `forecast_prev.json` whenever a rebuild changes the output (an identical rebuild leaves it alone). The Executive brief applies the same decision rules to both versions and lists segments whose suggested action changed. A change can come from new data or from a method change, which is why the data-quality page lists what changed in the data.
+
 ## Old vs new products (`scripts/build_cohorts.py`)
 All on the category model's own basis (reviews to Mar 2023), compared by product **age**, never by calendar date.
 - **Launch month:** Amazon's listed "date first available" (92% of products), else the first review (flagged). About 6% of reviews pre-date the listed launch (variants merged under one listing) and are counted as launch month. Products launched before 2012 are "legacy": their early life is outside the data.
