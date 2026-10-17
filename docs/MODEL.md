@@ -38,6 +38,16 @@ Simulated paths use shocks drawn here with a fixed seed (statsmodels' built-in b
 ## Product lifecycle
 For every product with 30+ reviews: first and last review, peak (3-month average), reviews and rating in the last 12 months vs the 12 before, and a stage: New (first reviewed in the last year), Faded (no reviews in six months), Low activity (under 10 in the last year), Growing or Declining (25% or more change), otherwise Steady. Reviews follow sales with a lag and measure engagement, not units.
 
+## Old vs new products (`scripts/build_cohorts.py`)
+All on the category model's own basis (reviews to Mar 2023), compared by product **age**, never by calendar date.
+- **Launch month:** Amazon's listed "date first available" (92% of products), else the first review (flagged). About 6% of reviews pre-date the listed launch (variants merged under one listing) and are counted as launch month. Products launched before 2012 are "legacy": their early life is outside the data.
+- **Where reviews come from:** each review is bucketed by the product's age when reviewed (under 12 months, 1 to 3 years, 3+ years); shares are shown by reviews and by the sales proxy.
+- **Cohort curves:** the average curve estimates the mean number of new reviews at each age using every product old enough to be observed at that age, then adds them up. (Averaging cumulative totals over a population that shrinks with age let the curve dip; the validation script caught this.) The typical (median) curve uses a fixed set of products observed for 36 months.
+- **Hit rate:** share of launched products reaching 10+, 50+ or 200+ reviews in their first 12 months, among products old enough to have a full year.
+- **Survival:** of products with 10+ reviews in year one, the share with at least one review in the six months around age 24, 36 or 48 months. The bar is easier to clear in recent years (more reviewers), so cross-cohort comparison is cautious.
+- **Time to peak:** judged over the same first 36 months for every cohort, for products with 50+ reviews in that window. Judging each cohort over its own observed life made recent launches look like they peak sooner purely because they had been observed for less time.
+- **Limits:** products Amazon removed may be missing (older cohorts may look healthier); reviews measure engagement, which follows sales with a lag.
+
 ## Monitoring ("is this month on track?")
 For each of the last 12 months the chosen model is refitted on data up to the previous month and asked what it expected. A month outside the 10th-90th percentile range is flagged. About 20% of months should be flagged by chance; a cluster of flags across many segments usually means a market-wide move.
 

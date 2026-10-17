@@ -37,6 +37,7 @@ Filling prices matters: listed prices alone overstated 2019 growth (+44% vs +13%
 - **Executive brief:** one-sentence outlook with a likely range and confidence, an annual-target tracker (chance of hitting a target), a monthly "is this on track?" check against what the model expected, suggested Invest / Fix / Risk decisions, and a scorecard for every brand, price band and top product.
 - **Market & company:** Amazon's real quarterly results through Q2 2026 (SEC filings), segment results, a quarterly net sales outlook checked against Amazon's own Q3 guidance, and U.S. retail and appliance-price context through Sep 2026.
 - **Product explorer:** pick any of 10,376 products with 30+ reviews (81% of all review volume) to see how it grew, where it is in its life, how its rating and unhappy-review share moved, and which topics customers talk about, recent vs earlier. A type overview covers the long tail.
+- **Product lifecycle:** old vs new products on the same March 2023 basis, compared by product age. Where each year's reviews come from (new, 1 to 3 years, 3+ years), how launches build an audience, hit rates, survival of established products, time to peak, launch quality, and which types and brands depend on new launches.
 - **Forecast lab:** pick any segment and measure, choose the horizon, see a month-by-month or running-total view with 80%/95% ranges, test scenarios (demand, price, elasticity), see what drives the change (orders vs price and mix), the seasonal pattern, a downloadable monthly plan, and how reliable the model has been.
 - How the model works and its limits: [docs/MODEL.md](docs/MODEL.md).
 
@@ -79,6 +80,7 @@ streamlit run app.py
 python scripts/build_products.py data_raw data     # product master + validated fills      (~6 min)
 python scripts/build_reviews.py  data_raw data     # one pass over 2M reviews + themes     (~6 min)
 python scripts/etl.py data && python scripts/build_segments.py data
+python scripts/build_cohorts.py data               # launch cohorts, new vs old products
 python scripts/build_product_explorer.py data
 python scripts/export_web_data.py
 OMP_NUM_THREADS=1 python scripts/build_forecasts.py
