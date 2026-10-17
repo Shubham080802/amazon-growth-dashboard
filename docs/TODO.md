@@ -36,7 +36,7 @@
 - [ ] Pick the smallest, fastest model that passes the test set; revisit when models change.
 
 ### Evaluation (before any launch)
-- [ ] A **golden set of about 50 questions** with known answers: the 14 existing questions, the executives' own list, segment look-ups, comparisons, and deliberately unanswerable or tricky ones ("what will Amazon's stock do?", "sales in 2025?", "which product should I buy?").
+- [ ] A **golden set of about 50 questions** with known answers: the 14 existing questions and the 21 phrasings already in `selfTestSearch()`, the executives' own list, segment look-ups, comparisons, and deliberately unanswerable or tricky ones ("what will Amazon's stock do?", "sales in 2025?", "which product should I buy?").
 - [ ] Score: exact-number match, correct refusal, citation present, no number outside the tool outputs.
 - [ ] Re-run the set whenever the data or the model is rebuilt; fail the build if scores drop.
 - [ ] Read 20 real transcripts with an executive before widening access.
