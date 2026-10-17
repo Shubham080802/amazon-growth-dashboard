@@ -5,8 +5,6 @@ let F = null, SEG = {}, FMONTHS = [];
 const QI = { p05: 0, p10: 1, p25: 4, p50: 9, p75: 14, p90: 17, p95: 18 };   // positions in the stored 19 quantiles
 const KIND = { total: "Total", family: "Parts vs appliances", type: "Product type", brand: "Brand", band: "Price band", product: "Product" };
 const pmOf = (s) => (s.series.sales ? "sales" : "orders");
-const esc2 = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const sgn = (v, f) => (v >= 0 ? "+" : "−") + f(Math.abs(v));
 
 Object.assign(state, {
   brief: { filter: "all", sortKey: "last12", sortDir: -1, pulse: "sales", target: null, rules: { invest: 0.7, risk: 0.7, floor: 4.0 } },
@@ -91,7 +89,7 @@ function status(m, metric) {
 // ---------------------------------------------------------------- executive brief
 function renderBrief() {
   const B = state.brief, t = SEG.total, d = t.d, se = t.series.sales, q12 = se.cumq[11];
-  if (B.target == null) B.target = Math.round((d.last12 * 1.10) / 1e4) * 1e4;
+  if (B.target == null) { const sv = +store.get("brief.target"); B.target = sv > 0 ? sv : Math.round((d.last12 * 1.10) / 1e4) * 1e4; }
   const pT = probAtLeast(q12, B.target), pG = d.pGrowth;
   const flat = Math.abs(d.growth) < 0.03;
   const asof = fmt.month(F.meta.last_month);
@@ -122,11 +120,11 @@ function renderBrief() {
         <div><div class="gv">${(pT * 100).toFixed(0)}%</div><div class="gt"><b>${gword}</b> to reach ${fmt.usdC(B.target)}</div></div>
       </div>
     </div>`;
-  $("briefTarget").onchange = (e) => { const v = parseMoney(e.target.value); if (Number.isFinite(v) && v > 0) { B.target = v; writeHash(); } renderBrief(); };
-  $("briefQuick").onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; B.target = Math.round(d.last12 * (1 + b.dataset.p / 100)); writeHash(); renderBrief(); };
+  $("briefTarget").onchange = (e) => { const v = parseMoney(e.target.value); if (Number.isFinite(v) && v > 0) { B.target = v; store.set("brief.target", v); writeHash(); } renderBrief(); };
+  $("briefQuick").onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; B.target = Math.round(d.last12 * (1 + b.dataset.p / 100)); store.set("brief.target", B.target); writeHash(); renderBrief(); };
 
   renderNotices(); renderCompanyStrip();
-  renderPulse(); renderDecisions(); renderScorecard();
+  renderPulse(); renderDecisions(); renderChanges(); renderScorecard();
 }
 
 function renderPulse() {
@@ -231,7 +229,12 @@ function labCtx() {
   const hist = s.hist[m], base = se.fc.mean.slice(0, h);
   const lastH = isR ? weightedRating(s, h) : sum(lastN(hist, h));
   const baseTotal = isR ? mean(base) : sum(base), cq = se.cumq[h - 1], cum = isR ? cq.map((v) => v / h) : cq;
-  if (!L.touched || L.target == null) L.target = isR ? lastH : (() => { const step = lastH > 1e5 ? 1e4 : lastH > 1e3 ? 100 : 1; return Math.round(lastH * 1.10 / step) * step; })();
+  const tkey = `lab.target.${L.seg}.${m}.${h}`;
+  if (!L.touched || L.target == null) {
+    const sv = +store.get(tkey);
+    if (!isR && sv > 0) { L.target = sv; L.touched = true; }
+    else L.target = isR ? lastH : (() => { const step = lastH > 1e5 ? 1e4 : lastH > 1e3 ? 100 : 1; return Math.round(lastH * 1.10 / step) * step; })();
+  }
   return { L, s, m, se, h, isR, mult, hist, base, lastH, baseTotal, cum, scen: mult !== 1 };
 }
 
@@ -434,10 +437,10 @@ function initLab() {
   const redo = () => { writeHash(); renderLab(); };
   $("labSeg").onchange = (e) => { L.seg = e.target.value; L.metric = pmOf(SEG[L.seg]); L.touched = false; redo(); };
   $("labMetric").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { L.metric = b.dataset.m; L.touched = false; redo(); } };
-  $("labH").oninput = (e) => { L.h = +e.target.value; if (!L.touched) L.target = null; redo(); };
+  $("labH").oninput = (e) => { L.h = +e.target.value; L.touched = false; L.target = null; redo(); };
   $("labView").onclick = (e) => { const b = e.target.closest("button"); if (b) { L.view = b.dataset.v; redo(); } };
   $("labBand").onclick = (e) => { const b = e.target.closest("button"); if (b) { L.band = +b.dataset.b; redo(); } };
-  $("labTarget").onchange = (e) => { const v = parseMoney(e.target.value); if (Number.isFinite(v) && v > 0) { L.target = v; L.touched = true; } redo(); };
+  $("labTarget").onchange = (e) => { const v = parseMoney(e.target.value); if (Number.isFinite(v) && v > 0) { L.target = v; L.touched = true; store.set(`lab.target.${L.seg}.${L.metric}.${L.h}`, v); } redo(); };
   [["lDemand", "demand"], ["lPrice", "price"], ["lElast", "elast"]].forEach(([id, k]) => { $(id).oninput = (e) => { L[k] = +e.target.value; redo(); }; });
   $("scenarioReset").onclick = () => { L.demand = 0; L.price = 0; L.elast = -1.5; redo(); };
   $("planCsv").onclick = () => {
@@ -460,4 +463,25 @@ function initLab() {
   [["ruleInvest", "invest", (v) => v + "%"], ["ruleRisk", "risk", (v) => v + "%"], ["ruleFloor", "floor", (v) => (+v).toFixed(1) + " ★"]].forEach(([id, k, f]) => {
     $(id).oninput = (e) => { B.rules[k] = k === "floor" ? +e.target.value : e.target.value / 100; $(id + "L").textContent = f(e.target.value); renderDecisions(); renderScorecard(); };
   });
+}
+
+// ---------------------------------------------------------------- what changed since the previous build
+let PREV = null;
+function loadPrevious() {
+  fetch("forecast_prev.json").then((r) => r.json()).then((p) => { p.segments.forEach(derive); PREV = p; if (state.tab === "brief") renderChanges(); }).catch(() => {});
+}
+function renderChanges() {
+  const box = $("changesCard");
+  if (!PREV) { box.hidden = true; return; }
+  const prev = Object.fromEntries(PREV.segments.map((s) => [s.id, s]));
+  const common = F.segments.filter((s) => prev[s.id] && s.kind !== "total" && s.kind !== "family");
+  const moves = common.map((s) => ({ s, a: decide(s), b: decide(prev[s.id]), p: prev[s.id] })).filter((x) => x.a.key !== x.b.key).sort((x, y) => y.s.d.last12 - x.s.d.last12);
+  const newSeg = F.segments.filter((s) => !prev[s.id]).length;
+  const tNow = SEG.total.d, tPrev = prev.total.d;
+  $("changesBody").innerHTML = `
+    <p class="lead2">Compared with the previous build (${esc2(PREV.meta.built || "earlier")}). Headline: expected 12-month growth for the whole category moved from <b>${pctTxt(tPrev.growth)}</b> to <b>${pctTxt(tNow.growth)}</b>, and expected sales from ${fmt.usdC(tPrev.fc12)} to ${fmt.usdC(tNow.fc12)}.</p>
+    ${moves.length ? `<ul class="chg-list">${moves.slice(0, 6).map((x) => `<li data-open="${x.s.id}"><span class="badge ${ACTION_CLS[x.b.key]}">${x.b.label}</span> → <span class="badge ${ACTION_CLS[x.a.key]}">${x.a.label}</span><b>${esc2(x.s.label)}</b><span class="sub2">${KIND[x.s.kind]} · expected growth ${pctTxt(x.p.d.growth)} → ${pctTxt(x.s.d.growth)}</span></li>`).join("")}</ul>`
+      : '<p class="empty-note">No segment changed its suggested action.</p>'}
+    <p class="note">${moves.length} of ${common.length} segments changed action${newSeg ? `; ${newSeg} segments are new (product types and parts vs appliances)` : ""}. Differences can come from new data or from method changes; the About the data page lists what changed in the data (for example, completed prices).</p>`;
+  box.hidden = false;
 }

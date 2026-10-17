@@ -12,7 +12,7 @@ const STAGE_NOTE = {
   Faded: "No reviews in the last six months of the data.",
   "Low activity": "Fewer than 10 reviews in the last 12 months, too few to call a trend.",
 };
-Object.assign(state, { px: { q: "", type: "", stage: "", sort: "n", shown: 25, sel: null, themeView: "recent" } });
+Object.assign(state, { px: { q: "", type: "", stage: "", sort: "n", shown: 25, sel: null, themeView: "recent", view: "find" } });
 const SORTS = {
   n: ["Most reviews", (a, b) => b.n - a.n],
   c: ["Most reviews, last 12 months", (a, b) => b.c - a.c],
@@ -46,19 +46,36 @@ function filteredProducts() {
 }
 
 // ---------------------------------------------------------------- list + type overview
+function showPxView() {
+  const v = state.px.view;
+  ["find", "compare", "brands"].forEach((k) => { $("pxView" + k[0].toUpperCase() + k.slice(1)).hidden = k !== v; });
+  document.querySelectorAll("#pxView button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+}
+
+async function openProductsForType(typeName) {
+  await loadPxIndex();
+  const i = PX.meta.types.indexOf(typeName);
+  if (i < 0) { toast("No listed products for that type"); return; }
+  Object.assign(state.px, { type: String(i), stage: "", sel: null, shown: 25, view: "find" });
+  goTab("products");
+}
+
 function renderProducts() {
+  showPxView();
+  const P = state.px;
+  if (P.view === "compare") { renderCompare(); return; }
   if (!PX) {
     $("pxList").innerHTML = '<tr><td class="empty-note">Loading products…</td></tr>';
     loadPxIndex().then(() => { renderProducts(); }).catch((e) => { $("pxList").innerHTML = `<tr><td>Could not load the product list: ${esc2(e)}</td></tr>`; });
     return;
   }
-  const P = state.px, m = PX.meta;
-  $("pxIntro").textContent = `${fmt.int(m.products_listed)} products with ${m.min_reviews}+ reviews, covering ${fmt.pct(m.reviews_covered_share, 0)} of all review volume across ${fmt.int(m.products_total)} products. Data to ${fmt.month(m.end)}. The rest have too few reviews for a trend; use the type overview for them.`;
+  if (P.view === "brands") { renderBrands(); renderTypeOverview(); return; }
+  const m = PX.meta;
+  $("pxIntro").textContent = `${fmt.int(m.products_listed)} products with ${m.min_reviews}+ reviews, covering ${fmt.pct(m.reviews_covered_share, 0)} of all review volume across ${fmt.int(m.products_total)} products. Data to ${fmt.month(m.end)}. The rest have too few reviews for a trend; the Brands & types view covers them.`;
   $("pxSort").innerHTML = Object.entries(SORTS).map(([k, [l]]) => `<option value="${k}"${k === P.sort ? " selected" : ""}>${l}</option>`).join("");
   $("pxType").value = P.type; $("pxSearch").value = P.q;
   document.querySelectorAll("#pxStage button").forEach((b) => b.classList.toggle("on", (b.dataset.s || "") === P.stage));
 
-  renderTypeOverview();
   const list = filteredProducts(), shown = list.slice(0, P.shown);
   $("pxCount").textContent = `${fmt.int(list.length)} product${list.length === 1 ? "" : "s"}`;
   const head = `<thead><tr><th>Product</th><th class="n">Reviews</th><th class="n">Last 12 mo</th><th class="n">Change</th><th class="n">Rating</th><th class="n">Stage</th><th class="n">Price</th></tr></thead>`;

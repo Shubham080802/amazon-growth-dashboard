@@ -102,9 +102,5 @@ function initLifecycle() {
   $("lcShareSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.lc.share = b.dataset.v; renderLifecycle(); } };
   $("lcCurveSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.lc.curve = b.dataset.v; renderLifecycle(); } };
   $("lcGroupSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { state.lc.group = b.dataset.v; renderLifecycleTable(); } };
-  $("lcTable").onclick = async (e) => {
-    const tr = e.target.closest("[data-lctype]"); if (!tr) return;
-    await loadPxIndex(); const i = PX.meta.types.indexOf(tr.dataset.lctype);
-    if (i >= 0) { state.px.type = String(i); state.px.stage = ""; state.px.sel = null; state.px.shown = 25; goTab("products"); }
-  };
+  $("lcTable").onclick = (e) => { const tr = e.target.closest("[data-lctype]"); if (tr) openProductsForType(tr.dataset.lctype); };
 }

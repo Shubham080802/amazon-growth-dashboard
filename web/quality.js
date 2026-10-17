@@ -1,4 +1,4 @@
-// "Data quality" tab: what was filled, how accurate each fill is, and which consistency checks pass.
+// "About the data" page: what was filled, how accurate each fill is, and which consistency checks pass.
 // Reads quality.json (built by scripts/validate_data.py).
 
 let QL = null;

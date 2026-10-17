@@ -24,7 +24,7 @@ function renderNotices() {
   if (!F || !MK) return;
   const asof = fmt.month(F.meta.last_month), age = monthsAgo(F.meta.last_month);
   const latest = MK.fred.RSNSR.dates.at(-1);
-  const html = `<span class="n-ic" aria-hidden="true">ⓘ</span><div><b>The category data ends ${asof}</b> (${ageText(age)}). Forecast months here are what the model saw from that date, not from today.
+  const html = `<span class="n-ic" aria-hidden="true">ⓘ</span><div><b>Category data ends ${asof}</b> (${ageText(age)}). Forecast months are the model's view from that date. ${info("The forecasts, products and cohorts rest on Amazon review data, which has no release after 2023. Months labelled 'next' or 'following' mean the period after March 2023, not after today.")}
     For where Amazon and the market stand now (through ${fmt.month(latest)}), see <button type="button" class="linkbtn" data-go-tab="market">Market &amp; company</button>.</div>`;
   ["asofBrief", "asofLab"].forEach((id) => { const el = $(id); if (el) el.innerHTML = html; });
 }

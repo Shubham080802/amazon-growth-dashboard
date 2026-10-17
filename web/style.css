@@ -215,7 +215,7 @@ th.sorted { color: var(--ink); }
 
 /* ---------- executive brief & forecast lab ---------- */
 body:not([data-tab="overview"]) #perfTop { display: none; }
-body:is([data-tab="brief"], [data-tab="lab"], [data-tab="market"], [data-tab="products"], [data-tab="quality"], [data-tab="lifecycle"]) :is(.range, #presets) { display: none; }
+body:not([data-tab="performance"]) :is(.range, #presets) { display: none; }
 .sect { font-size: 13px; font-weight: 600; color: var(--ink2); letter-spacing: .02em; text-transform: uppercase; margin: 4px 0 10px; }
 .verdict { padding: 26px 28px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: center; }
 .verdict h2 { font-size: clamp(24px, 3.4vw, 36px); font-weight: 750; letter-spacing: -.025em; line-height: 1.15; margin-bottom: 10px; }
@@ -333,3 +333,45 @@ td.wrap { white-space: normal; min-width: 260px; } .more { text-align: center; p
 .lcv { padding: 24px 28px; }
 .lcv h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 750; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 12px; }
 .lead-list { font-size: 15px; gap: 10px; }
+
+/* ---------- shared header: data freshness ---------- */
+.fresh { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font: inherit; font-size: 12.5px; color: var(--ink2); cursor: pointer; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; }
+.fchip:hover { color: var(--ink); border-color: var(--axis); } .fchip b { color: var(--ink); font-weight: 650; }
+.fdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.fchip.good .fdot { background: var(--good); } .fchip.warn .fdot { background: var(--c4); } .fchip.bad .fdot { background: var(--bad); }
+.fchip.all { display: none; }
+@media (max-width: 1100px) { .fchip:not(.all) { display: none; } .fchip.all { display: inline-flex; } }
+
+/* ---------- "i" pop-ups: short explanations on demand ---------- */
+.tip { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-left: 4px; border-radius: 50%; border: 1px solid var(--axis); background: none; color: var(--muted); font: italic 700 11px/1 Georgia, serif; cursor: help; position: relative; vertical-align: 1px; padding: 0; }
+.tip:hover, .tip:focus-visible { color: var(--c1); border-color: var(--c1); }
+.tip::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: min(300px, 80vw); padding: 9px 12px; border-radius: 10px;
+  background: var(--ink); color: var(--surface); font: 400 12.5px/1.45 system-ui, sans-serif; font-style: normal; text-align: left; white-space: normal; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 40; }
+.tip:hover::after, .tip:focus-visible::after { opacity: 1; }
+
+/* ---------- layout bits for the merged tabs ---------- */
+.brief-top { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .brief-top .notice { flex: 1 1 420px; }
+.view-seg { align-self: flex-start; margin-bottom: 4px; } .stack { display: flex; flex-direction: column; gap: 16px; } .stack[hidden] { display: none; }
+.cmp-pick { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 12px; } .cmp-pick .field { flex: 1 1 220px; } .cmp-pick select { width: 100%; min-width: 0; }
+td.rowlab { color: var(--ink2); font-weight: 600; white-space: nowrap; } #cmpTable th { white-space: normal; min-width: 150px; }
+.changes .lead2, #changesBody .lead2 { color: var(--ink2); margin-bottom: 8px; } #changesBody .lead2 b { color: var(--ink); }
+.chg-list { list-style: none; margin: 8px 0; padding: 0; display: grid; } .chg-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--border); cursor: pointer; } .chg-list li:first-child { border-top: 0; } .chg-list li:hover b { color: var(--c1); }
+.chg-list .sub2 { flex-basis: 100%; margin-left: 2px; }
+details.method { padding: 14px 20px; } details.method > summary { cursor: pointer; font-size: 16px; font-weight: 700; } details.method[open] > summary { margin-bottom: 10px; }
+.back { margin: 0 0 4px; } .foot-links { margin-bottom: 6px; } .infoline { display: inline; }
+.print-head { display: none; }
+
+/* ---------- print: one clean page ---------- */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .top, .toolbar, .toast, footer, #printBtn, .presets, .tabs, .chipbtn, .seg, .tip, .more, .quick, .linkbtn, .rules, .back { display: none !important; }
+  .print-head { display: flex !important; justify-content: space-between; margin: 0 0 12px; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
+  .panel:not(.active) { display: none !important; }
+  .panel.active > *, .hero, .tiles { animation: none !important; }
+  .wrap { max-width: none; padding: 0; }
+  .card, .tile, .dcard { box-shadow: none !important; border: 1px solid #ccc; break-inside: avoid; }
+  .plot { height: 230px !important; }
+  #scorecard tbody tr:nth-child(n+11) { display: none; }
+  #tab-brief .tablewrap { overflow: visible; }
+}
