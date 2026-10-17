@@ -196,6 +196,21 @@
       <div class="tablewrap"><table id="bridge"></table></div>
       <p class="note" id="bridgeNote"></p>
     </article>
+    <div id="recentSec" hidden>
+      <section>
+        <h2 class="sect">Recent appliance activity (to <span id="recentTo"></span>)</h2>
+        <div class="tiles tiles-4" id="recTiles"></div>
+      </section>
+      <div class="grid2">
+        <article class="card"><header><h3>Appliance safety recalls by year</h3><p>U.S. Consumer Product Safety Commission recalls whose product is a major or small kitchen or laundry appliance.</p></header><div class="plot" id="c-rec-year"></div></article>
+        <article class="card"><header><h3>New ENERGY STAR models by year</h3><p>Models by the date they reached the market. Currently certified models only.</p></header><div class="plot" id="c-es-year"></div></article>
+      </div>
+      <div class="grid2">
+        <article class="card"><header><h3>Brands launching the most certified models since April 2023</h3><p>A direct look at who has been active since the review data ends.</p></header><div class="plot" id="c-es-brand"></div></article>
+        <article class="card"><header><h3>Latest appliance recalls</h3><p>Click a row for the official notice.</p></header><div class="tablewrap"><table id="recTable"></table></div></article>
+      </div>
+      <p class="note" id="recNote"></p>
+    </div>
     <p class="note">Sources: <a href="https://www.sec.gov/edgar/sec-api-documentation">SEC EDGAR</a> (Amazon filings), <a href="https://fred.stlouisfed.org/">FRED</a> republishing U.S. Census Bureau and BLS data, and <a href="https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results">Amazon's Q2 2026 earnings release</a>. Segment detail and guidance were transcribed from that release by hand.</p>
   </div>
 
@@ -521,6 +536,7 @@
 <script src="rules.js"></script>
 <script src="lab.js"></script>
 <script src="market.js"></script>
+<script src="recent.js"></script>
 <script src="products.js"></script>
 <script src="quality.js"></script>
 <script src="lifecycle.js"></script>

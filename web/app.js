@@ -154,7 +154,7 @@ function renderFreshness() {
 
 // ---------------------------------------------------------------- tabs, URL, rendering
 const renderers = {
-  brief: () => renderBrief(), market: () => renderMarket(), lab: () => renderLab(), products: () => renderProducts(),
+  brief: () => renderBrief(), market: () => { renderMarket(); if (typeof renderRecent === "function") renderRecent(); }, lab: () => renderLab(), products: () => renderProducts(),
   lifecycle: () => renderLifecycle(), performance: (f) => renderPerformance(f), quality: () => renderQuality(),
 };
 const PRESETS = () => {
@@ -229,6 +229,7 @@ function downloadCsv() {
 
 function start() { Promise.all(["data.json", "forecast.json", "market.json", "quality.json", "cohorts.json", "topics.json"].map((u) => fetch(u).then((r) => r.json()))).then(([data, fdata, mdata, qdata, cdata, tdata]) => {
   D = data; M = rows(D.monthly); prepForecast(fdata); prepMarket(mdata); prepQuality(qdata); prepLifecycle(cdata); prepTopics(tdata);
+  fetch("recent.json").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) { prepRecent(d); if (state.tab === "market") renderRecent(); } }).catch(() => {});   // optional, additive
   YEARS = [...new Set(M.map((r) => yearOf(r.month)))].filter((y) => y >= 2012);        // years before 2012 have almost no data
   state.from = YEARS[0]; state.to = YEARS.at(-1);
   readHash();
