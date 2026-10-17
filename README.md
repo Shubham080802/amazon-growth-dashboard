@@ -10,14 +10,14 @@ Six tabs, plus an "About the data" page linked from the footer and the header's 
 
 | Tab | Answers |
 |---|---|
-| **Executive brief** | Where is the category heading, how sure are we, what should we do? Outlook with a likely range and confidence, an annual-target tracker (chance of reaching a target, remembered between visits), a monthly "is this on track?" check, suggested Invest / Fix / Risk decisions, what changed since the previous build, and a scorecard of every brand, price band, product type and top product. Save it as a one-page PDF. |
+| **Executive brief** | Where is the category heading, how sure are we, what should we do? **Ask the dashboard** (suggested questions and segment search, answered from the same numbers as the charts, never guessed). Outlook with a likely range and confidence, an annual-target tracker (chance of reaching a target, remembered between visits), a monthly "is this on track?" check, suggested Invest / Fix / Risk decisions, what changed since the previous build, and a scorecard of every brand, price band, product type and top product. Save it as a one-page PDF. |
 | **Market & company** | Amazon's real quarterly results through Q2 2026 (SEC filings), revenue mix and segments, a quarterly net sales outlook checked against Amazon's own guidance, U.S. retail and appliance-price context, and demand drivers (housing, mortgage rates, sentiment) through Sep 2026. |
 | **Forecast lab** | Pick any segment and measure; month-by-month or running-total view with 80% / 95% ranges; scenario levers (demand, price, elasticity); what drives the change; seasonality; a downloadable monthly plan; and how reliable the model has been. |
 | **Products** | *Find a product*: any of 10,376 products with 30+ reviews (81% of review volume): growth, lifecycle stage, rating shift, launch position, and what customers talk about, recent vs earlier. *Compare*: two or three brands, types, price bands or products side by side. *Brands & types*: brand share of voice and the type overview. |
 | **Lifecycle** | Old vs new products on the same March 2023 basis, compared by product age: where reviews come from, how launches build an audience, hit rates, survival, time to peak, launch quality, and which types and brands depend on new launches. |
 | **Performance** | Sales proxy, reviews, rating and positive share over time (with optional event markers), annual sales, seasonality, satisfaction, and category-wide topic trends with the topic shifts inside each product type. |
 
-A shared header shows how current each data source is (green, amber or red). Old links keep working (`#tab=overview`, `#tab=brands` and so on map to the new tabs).
+Under key charts, **What am I looking at?** explains how to read the chart and what it shows right now. A shared header shows how current each data source is (green, amber or red). Old links keep working (`#tab=overview`, `#tab=brands` and so on map to the new tabs).
 
 ## Data sources and how current they are
 
@@ -46,6 +46,9 @@ Each gap is handled in the most conservative way that works, every fill is flagg
 Filling prices matters: listed prices alone overstated 2019 growth (+44% vs +13% with prices completed) and understated the 2022 decline (−3% vs −13%).
 
 The method, including the forecasting model, decision rules, topics and cohorts, is in [docs/MODEL.md](docs/MODEL.md).
+
+## Roadmap
+A grounded Q&A agent (free-form questions through a language model, limited to the dashboard's own numbers) is planned but on hold; the plan, decisions needed and acceptance tests are in [docs/TODO.md](docs/TODO.md).
 
 ## Run it
 

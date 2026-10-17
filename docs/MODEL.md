@@ -54,6 +54,9 @@ All on the category model's own basis (reviews to Mar 2023), compared by product
 - **Time to peak:** judged over the same first 36 months for every cohort, for products with 50+ reviews in that window. Judging each cohort over its own observed life made recent launches look like they peak sooner purely because they had been observed for less time.
 - **Limits:** products Amazon removed may be missing (older cohorts may look healthier); reviews measure engagement, which follows sales with a lag.
 
+## Ask the dashboard and the explainers (`web/explain.js`)
+Deliberately **not** a language model. Each of the 14 suggested questions is a template filled with numbers read from the same data the charts use (the decision rules, forecasts, topic shifts, cohorts, Amazon figures and data-quality summary), each with a link to where the numbers live and a caveat line. Typing does two things only: an exact or word-start match against segment names opens that segment's profile (several matches give a pick-list); otherwise it scores the question list by keyword. Anything else gets an explicit "I can't answer that from this dashboard" and the available questions. The "What am I looking at?" panels under key charts use the same approach and refresh when the chart changes. Because nothing is generated freely, an answer can be wrong only if the data or the template is wrong; `selfTestAsk()` runs every answer, every segment profile and every explainer and flags any broken number.
+
 ## Monitoring ("is this month on track?")
 For each of the last 12 months the chosen model is refitted on data up to the previous month and asked what it expected. A month outside the 10th-90th percentile range is flagged. About 20% of months should be flagged by chance; a cluster of flags across many segments usually means a market-wide move.
 
