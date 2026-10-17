@@ -25,6 +25,7 @@ web.mkdir(parents=True, exist_ok=True)
 MIN_REVIEWS, MIN_THEME_REVIEWS, SHARDS = 30, 100, 32
 
 m = pd.read_csv(data / "products_master.csv.gz")
+coh = pd.read_csv(data / "product_cohort.csv.gz").set_index("parent_asin")     # from build_cohorts.py
 r = pd.read_parquet(data / "reviews_lean.parquet")
 END = int(r["month"].max())                                   # last complete month in the data (Mar 2023)
 ym = lambda mi: f"{mi // 12}-{mi % 12 + 1:02d}"
@@ -94,6 +95,9 @@ for p, g in mon.groupby("p"):
         "dr": None if (r_cur is None or r_pri is None) else round(float(r_cur - r_pri), 2), "st": stage, "pk": ym(peak),
         "la": row["launch"] if isinstance(row["launch"], str) else None,
         "rk": None if pd.isna(row["bsr_rank"]) else int(row["bsr_rank"]), "ra": int(row["rating_number"]), "sh": sh,
+        "cy": int(coh.at[asin, "cy"]) if asin in coh.index and coh.at[asin, "cy"] > 0 else None,
+        "f12": None if (asin not in coh.index or pd.isna(coh.at[asin, "f12"])) else int(coh.at[asin, "f12"]),
+        "p12": None if (asin not in coh.index or pd.isna(coh.at[asin, "p12"])) else round(float(coh.at[asin, "p12"]), 3),
     })
     d = {"a": asin, "s": ym(first), "n": n.tolist(), "rs": rs.tolist(), "ng": full["ng"].tolist(), "v": full["v"].tolist(), "hv": int(full["help_"].sum())}
     if total >= MIN_THEME_REVIEWS:
