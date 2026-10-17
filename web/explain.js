@@ -33,7 +33,7 @@ const QUESTIONS = [
     return { head: r.length ? `${r.length} segments clear the growth and rating bar.` : "No segment clears the growth and rating bar under the current rules.",
       bullets: r.slice(0, 5).map(({ s }) => `${nameSeg(s)}: expected ${pctTxt(s.d.growth)} (${sgn(incr(s), (v) => fmtPm(s, v))}); ${Math.round(s.d.pGrowth * 100)}% chance of growth; rating ${s.d.rNow != null ? s.d.rNow.toFixed(2) : "n/a"}${tentative(s)}`),
       src: SRC("See the scorecard", 'data-go-tab="brief"'), caveat: "Treat segments marked low confidence as a watch-list, not a budget line." }; } },
-  { id: "quality", q: "Which segments have a quality problem?", kw: ["quality", "rating", "unhappy", "complaint", "satisfaction", "fix"], a() {
+  { id: "quality", q: "Which segments have a quality problem?", kw: ["quality", "rating", "unhappy", "complaint", "satisfaction", "fix", "problem", "problems"], a() {
     const r = F.segments.filter((s) => s.kind !== "total" && s.kind !== "family").map((s) => ({ s, a: decide(s) })).filter((x) => x.a.key === "fix").sort((x, y) => y.s.d.last12 - x.s.d.last12);
     return { head: r.length ? `${r.length} growing segments have a low or falling rating.` : "No growing segment has a low or falling rating under the current rules.",
       bullets: r.slice(0, 5).map(({ s }) => `${nameSeg(s)}: sales ${pctTxt(s.d.growth)} expected, but rating ${s.d.rNow != null ? s.d.rNow.toFixed(2) : "n/a"}${s.d.dR != null ? ` (${sgn(s.d.dR, (v) => v.toFixed(2))} vs last year)` : ""}${tentative(s)}`),
@@ -51,7 +51,7 @@ const QUESTIONS = [
     return { head: `Expected 12-month growth for the whole category moved from ${pctTxt(tp.growth)} to ${pctTxt(tn.growth)}; ${mv.length} segments changed their suggested action.`,
       bullets: mv.slice(0, 5).map((x) => `${nameSeg(x.s)}: ${x.b.label} → ${x.a.label} (expected growth ${pctTxt(prev[x.s.id].d.growth)} → ${pctTxt(x.s.d.growth)})`),
       src: SRC("See the full list", 'data-go-tab="brief"'), caveat: "Changes can come from new data or from method changes such as completed prices; see About the data." }; } },
-  { id: "reliable", q: "How reliable is the forecast?", kw: ["reliable", "accurate", "accuracy", "trust", "confidence", "error", "miss", "wrong"], a() {
+  { id: "reliable", q: "How reliable is the forecast?", kw: ["reliable", "accurate", "accuracy", "trust", "confidence", "error", "miss", "wrong", "forecast", "model", "sure"], a() {
     const se = SEG.total.series.sales, am = MK.amazon.forecast;
     return { head: `For the category, the model has typically missed by about ${(se.wmape * 100).toFixed(0)}% a month in backtests (${SEG.total.d.grade} confidence).`,
       bullets: [`Its 80% ranges contained the real outcome ${Math.round(se.coverage80 * 10)} times in 10 in backtests (the aim is 8).`, Math.abs(se.bias) < 0.03 ? "No consistent tendency to over- or under-shoot." : `Past forecasts ran ${(Math.abs(se.bias) * 100).toFixed(0)}% ${se.bias > 0 ? "high" : "low"} on average.`, `Amazon's own quarterly revenue is forecast far more accurately (typical miss ${(am.wmape * 100).toFixed(1)}%).`],
@@ -66,12 +66,12 @@ const QUESTIONS = [
     return { head: `In the year to ${fmt.month(LC.meta.end)}, products launched within the year drew ${fmt.pct(l.new.orders, 0)} of reviews; products over three years old drew ${fmt.pct(l.old.orders, 0)}.`,
       bullets: [`In 2016 the split was ${fmt.pct(y16.new.orders, 0)} new and ${fmt.pct(y16.old.orders, 0)} older.`, `New products are ${fmt.pct(l.new.sales, 0)} of the sales proxy because they sell at higher prices on average.`],
       src: SRC("Open Lifecycle", 'data-go-tab="lifecycle"'), caveat: "Compared by product age on the same March 2023 basis." }; } },
-  { id: "price", q: "What happens if we raise prices 5%?", kw: ["price", "prices", "pricing", "raise", "increase", "elasticity", "scenario", "what if"], a() {
+  { id: "price", q: "What happens if we raise prices 5%?", kw: ["price", "prices", "pricing", "raise", "increase", "elasticity", "scenario", "hike", "cut", "lower", "discount", "drop"], a() {
     const e = -1.5, p = 0.05, o = Math.pow(1 + p, e), s = Math.pow(1 + p, 1 + e), d = SEG.total.d;
     return { head: `With a price elasticity of −1.5 (an assumption, not measured from this data), a 5% price rise would cut orders by about ${(Math.abs(o - 1) * 100).toFixed(1)}% and move sales by about ${sgn(s - 1, (v) => (v * 100).toFixed(1) + "%")}.`,
       bullets: [`Applied to the expected ${fmt.usdC(d.fc12)} over the next 12 months, that is about ${fmt.usdC(d.fc12 * s)}.`, "Change the elasticity, price and demand shift yourself in the scenario levers."],
       src: SRC("Try it in the Forecast lab", 'data-ask-preset="price5"'), caveat: "Elasticity is the key unknown. Nothing in the review data can estimate it, so treat this as an illustration." }; } },
-  { id: "drivers", q: "What is driving the change in sales?", kw: ["drive", "driving", "driver", "drivers", "volume", "mix", "orders", "why"], a() {
+  { id: "drivers", q: "What is driving the change in sales?", kw: ["drive", "driving", "driver", "drivers", "volume", "mix", "orders", "why", "sales", "growth"], a() {
     const t = SEG.total, h = 12, Ol = sum(lastN(t.hist.orders, h)), Sl = sum(lastN(t.hist.sales, h)), Of = sum(t.series.orders.fc.mean.slice(0, h)), Sf = sum(t.series.sales.fc.mean.slice(0, h));
     const vol = (Of - Ol) * (Sl / Ol), price = Sf - Sl - vol;
     return { head: `Of the expected ${sgn(Sf - Sl, fmt.usdC)} change in sales, ${sgn(vol, fmt.usdC)} comes from the number of orders and ${sgn(price, fmt.usdC)} from price and product mix.`,
@@ -82,7 +82,7 @@ const QUESTIONS = [
     return { head: `${qLabel(l.q)}: net sales ${bn(l.revenue)} (${pctTxt(l.revenue / p.revenue - 1)}), operating income ${bn(l.operating_income)} (${fmt.pct(l.operating_income / l.revenue)} margin).`,
       bullets: [`Fastest-growing segment: ${seg.name}, ${pctTxt(seg.sales / seg.sales_prior - 1)}.`, `${qLabel(g.quarter)} guidance: ${bn(g.sales_lo)} to ${bn(g.sales_hi)}.`],
       src: SRC("Open Market & company", 'data-go-tab="market"'), caveat: "From SEC filings and Amazon's earnings releases; company-wide, not appliances only." }; } },
-  { id: "fresh", q: "How current is the data?", kw: ["current", "fresh", "freshness", "date", "old", "recent", "latest", "stale", "updated"], a() {
+  { id: "fresh", q: "How current is the data?", kw: ["current", "fresh", "freshness", "date", "data", "old", "recent", "latest", "stale", "updated", "how old"], a() {
     const items = [["Category reviews", F.meta.last_month, 0], ["Amazon filings", MK.meta.amazon_latest_quarter, 2], ["Market data", MK.fred.RSNSR.dates.at(-1), 0]];
     return { head: `The category review data ends ${fmt.month(F.meta.last_month)}, ${ageText(monthsAgo(F.meta.last_month))}. Amazon and market data are much more recent.`,
       bullets: items.map(([n, m, add]) => `${n}: latest ${m.length === 7 && n === "Amazon filings" ? qLabel(m) : fmt.month(m)} (${ageText(monthsAgo(m, add))})`),
@@ -120,22 +120,40 @@ function showAnswer(ans, qtext) {
   box.hidden = false;
 }
 
+const STOP = new Set(["what", "will", "the", "how", "are", "is", "do", "does", "did", "we", "can", "you", "which", "where", "when", "why", "our", "for", "this", "that", "with", "about", "from", "tell", "show", "give", "any", "has", "have", "and", "who", "should", "would", "could", "there", "their", "them", "than", "then", "its", "was", "were", "been", "please", "me", "my", "get", "next", "happens", "happen", "going", "go", "much", "many", "some", "way", "lot"]);
+const OUT_OF_SCOPE = [
+  { test: (t) => /\b(stock|stocks|shares?|share price|ticker|dividends?|crypto|bitcoin|etf|portfolio)\b/.test(t), msg: "I don't answer questions about stock prices or investments. The Market & company tab shows Amazon's reported results and guidance." },
+  { test: (t) => /\b202[4-9]\b/.test(t) && !/\b(amazon|aws|company|market|retail|quarter|quarterly|guidance|earnings)\b/.test(t), msg: "The category review data ends in March 2023, so I can't say what happened in 2024 or later. For recent periods, see Market & company (Amazon's results and U.S. retail data)." },
+  { test: (t) => /\b(weather|recipe|sports?|news|politics|joke)\b/.test(t), msg: "That's outside what this dashboard covers." },
+];
+function declineAnswer(text, why) {
+  $("askAnswer").innerHTML = `<div class="ask-q">${esc2(text)}</div><div class="ask-head">I can't answer that from this dashboard.</div><p class="note">${esc2(why)} Try one of the questions above, or type a brand, product type or price band, for example “ice makers”, “GE” or “under $25”.</p>`;
+  $("askAnswer").hidden = false;
+}
 const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9& ]/g, " ").replace(/\s+/g, " ").trim();
 function askRun(text) {
   const t = norm(text); if (!t) { $("askAnswer").hidden = true; return; }
   // an exact name wins outright; otherwise every typed word must start a word in the segment's name ("ge" matches "GE", never "refriGErator")
-  const all = F.segments.filter((s) => s.kind !== "total"), exact = all.filter((s) => norm(s.label) === t);
-  const qw = t.split(" ").filter(Boolean);
+  if (["help", "hi", "hello", "hey", "what can you do", "how does this work", "?"].includes(t)) {
+    $("askAnswer").innerHTML = `<div class="ask-q">${esc2(text)}</div><div class="ask-head">Here is what I can answer.</div><p class="note">Pick one of the questions above, or type a brand, product type or price band (for example “ice makers”, “GE” or “under $25”) to get its profile. Every answer is built from the numbers on these pages and links back to them. I don't guess, and I don't cover anything after March 2023 for the category.</p>`;
+    $("askAnswer").hidden = false; return;
+  }
+  const all = F.segments.filter((s) => s.kind !== "total"), qw = t.split(" ").filter((w) => w && !STOP.has(w));
+  const exact = all.filter((s) => norm(s.label) === t || (qw.length && norm(s.label) === qw.join(" ")));
   const segs = exact.length ? exact : all.filter((s) => { const lw = norm(s.label).split(" "); return qw.length && qw.every((w) => lw.some((x) => x.startsWith(w))); });
   if (segs.length === 1) { showAnswer(segmentAnswer(segs[0]), text); return; }
   if (segs.length > 1) {
     $("askAnswer").innerHTML = `<div class="ask-q">${esc2(text)}</div><div class="ask-head">Several segments match. Pick one:</div><div class="ask-chips">${segs.slice(0, 8).map((s) => `<button type="button" class="chipbtn" data-ask-seg="${esc2(s.id)}">${esc2(s.label)} <span class="sub2i">${KIND[s.kind]}</span></button>`).join("")}</div>`;
     $("askAnswer").hidden = false; return;
   }
-  const words = t.split(" ").filter((w) => w.length > 2), scored = QUESTIONS.map((q) => ({ q, sc: q.kw.filter((k) => words.some((w) => k.startsWith(w) || w.startsWith(k))).length + (norm(q.q).includes(t) ? 3 : 0) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc);
+  // things this dashboard will not speak to, whatever other words appear
+  const oos = OUT_OF_SCOPE.find((o) => o.test(t));
+  if (oos) { declineAnswer(text, oos.msg); return; }
+  const words = t.split(" ").filter((w) => w.length > 2 && !STOP.has(w));
+  const scored = words.length ? QUESTIONS.map((q) => ({ q, hit: words.filter((w) => q.kw.some((k) => k.startsWith(w) || w.startsWith(k))).length })).filter((x) => x.hit / words.length >= 0.5)
+    .sort((a, b) => b.hit / words.length - a.hit / words.length || b.hit - a.hit) : [];
   if (scored.length) { const best = scored[0].q; showAnswer(best.a(), best.q); return; }
-  $("askAnswer").innerHTML = `<div class="ask-q">${esc2(text)}</div><div class="ask-head">I can't answer that from this dashboard.</div><p class="note">I only answer from the numbers on these pages, so I'd rather say so than guess. Try one of the questions above, or type a brand, product type or price band, for example “ice makers”, “GE” or “under $25”.</p>`;
-  $("askAnswer").hidden = false;
+  declineAnswer(text, "I only answer from the numbers on these pages, so I'd rather say so than guess.");
 }
 
 function renderAsk() {
@@ -250,5 +268,23 @@ function selfTestAsk() {
   QUESTIONS.forEach((q) => { try { test("Q " + q.id, q.a()); } catch (e) { bad.push("Q " + q.id + " threw " + e.message); } });
   F.segments.filter((s) => s.kind !== "total").forEach((s) => { try { test("seg " + s.id, segmentAnswer(s)); } catch (e) { bad.push("seg " + s.id + " threw " + e.message); } });
   Object.keys(EXPLAIN).forEach((id) => { try { test("explain " + id, EXPLAIN[id]()); } catch (e) { bad.push("explain " + id + " threw " + e.message); } });
+  return bad;
+}
+
+// search regression set: the matcher must pick the right answer or decline; run in the console while changing keywords
+function selfTestSearch() {
+  const cases = [["what will amazon stock do", "decline"], ["weather in paris", "decline"], ["sales in 2025", "decline"], ["amazon 2025 revenue", "amazon"], ["outlook", "outlook"], ["at risk", "risk"], ["who should we invest in", "invest"],
+    ["customer complaints", "topics"], ["prices up 5%", "price"], ["is the data old", "fresh"], ["how accurate is the forecast", "reliable"], ["what changed", "changed"], ["are we on track this month", "ontrack"], ["how is amazon doing", "amazon"],
+    ["new vs old products", "newold"], ["what did you estimate", "filled"], ["what is driving sales", "drivers"], ["quality problems", "quality"], ["tell me a joke", "decline"], ["what happens if we cut prices", "price"], ["how much will sales grow", "outlook"]];
+  const bad = [];
+  cases.forEach(([q, want]) => {
+    const t = norm(q), oos = OUT_OF_SCOPE.find((o) => o.test(t)); let got = "decline";
+    if (!oos) {
+      const words = t.split(" ").filter((w) => w.length > 2 && !STOP.has(w));
+      const sc = words.length ? QUESTIONS.map((x) => ({ x, hit: words.filter((w) => x.kw.some((k) => k.startsWith(w) || w.startsWith(k))).length })).filter((s) => s.hit / words.length >= 0.5).sort((a, b) => b.hit / words.length - a.hit / words.length || b.hit - a.hit) : [];
+      if (sc.length) got = sc[0].x.id;
+    }
+    if (got !== want) bad.push(`"${q}" → ${got}, expected ${want}`);
+  });
   return bad;
 }
