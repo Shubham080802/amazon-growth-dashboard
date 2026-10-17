@@ -375,3 +375,17 @@ details.method { padding: 14px 20px; } details.method > summary { cursor: pointe
   #scorecard tbody tr:nth-child(n+11) { display: none; }
   #tab-brief .tablewrap { overflow: visible; }
 }
+
+/* ---------- ask the dashboard, explainers ---------- */
+.ask input[type=search] { width: 100%; max-width: none; margin: 4px 0 10px; padding: 11px 14px; font-size: 15px; }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-answer { margin-top: 14px; padding: 16px 18px; border-radius: 12px; background: var(--page); border-left: 3px solid var(--c1); }
+.ask-q { font-size: 12.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin-bottom: 4px; }
+.ask-head { font-size: 17px; font-weight: 650; letter-spacing: -.01em; line-height: 1.35; margin-bottom: 8px; }
+.ask-answer ul { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 6px; color: var(--ink2); font-size: 14.5px; } .ask-answer ul b { color: var(--ink); }
+.ask-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; font-size: 13px; } .ask-cav { color: var(--muted); }
+.sub2i { color: var(--muted); font-size: 12px; font-weight: 400; font-style: normal; }
+.explain-wrap { margin: 2px 0 8px; } .explain-btn { background: none; border: 0; padding: 4px 0; font: inherit; font-size: 13px; font-weight: 650; color: var(--c1); cursor: pointer; }
+.explain-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.explain { margin-top: 6px; padding: 12px 14px; border-radius: 10px; background: var(--page); font-size: 14px; color: var(--ink2); } .explain p { margin: 0 0 8px; } .explain p:last-child { margin: 0; } .explain b { color: var(--ink); }
+@media print { .ask, .explain-wrap { display: none !important; } }

@@ -64,8 +64,11 @@ function layout(extra = {}) {
   }
   return l;
 }
-const draw = (id, traces, lay) =>
-  Plotly.react(id, traces, lay, { displayModeBar: false, responsive: true, scrollZoom: false });
+const draw = (id, traces, lay) => {
+  const r = Plotly.react(id, traces, lay, { displayModeBar: false, responsive: true, scrollZoom: false });
+  if (typeof explainTouch === "function") explainTouch(id);          // keep an open "What am I looking at?" in step with the chart
+  return r;
+};
 function onceOn(id, evt, fn) { const el = $(id); if (!el._bound) el._bound = {}; if (!el._bound[evt]) { el._bound[evt] = 1; el.on(evt, fn); } }
 const line = (color, w = 2) => ({ color, width: w, shape: "spline", smoothing: 0.4 });
 const dot = (x, y, color) => ({ x: [x], y: [y], mode: "markers", showlegend: false, hoverinfo: "skip",
@@ -246,7 +249,7 @@ function start() { Promise.all(["data.json", "forecast.json", "market.json", "qu
   $("cmpToggle").onclick = () => { state.cmp = !state.cmp; syncUI(); renderAll(); };
   $("evToggle").onclick = () => { state.ev = !state.ev; syncUI(); renderAll(); };
 
-  initLab(); initProducts(); initLifecycle(); initPerformance(); initCompare();
+  initLab(); initProducts(); initLifecycle(); initPerformance(); initCompare(); initAsk(); initExplain();
   loadPrevious();                                                                       // for the "what changed" box; not needed to render the page
 
   $("printBtn").onclick = () => window.print();

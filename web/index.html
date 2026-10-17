@@ -71,6 +71,13 @@
     <section class="strip card" id="companyStrip"></section>
     <section class="verdict card" id="verdict"></section>
 
+    <article class="card ask" id="askCard">
+      <header><h3>Ask the dashboard</h3><p>Pick a question, or type a brand, product type or price band. Answers are built from the same numbers as the charts and say where they come from. No guessing.</p></header>
+      <input type="search" id="askInput" placeholder="Try “ice makers”, “GE”, “at risk” or “prices”" aria-label="Ask a question or search for a segment" autocomplete="off">
+      <div class="ask-chips" id="askChips"></div>
+      <div class="ask-answer" id="askAnswer" hidden aria-live="polite"></div>
+    </article>
+
     <div class="grid2">
       <article class="card">
         <header class="row-head">
@@ -518,5 +525,6 @@
 <script src="lifecycle.js"></script>
 <script src="performance.js"></script>
 <script src="compare.js"></script>
+<script src="explain.js"></script>
 </body>
 </html>
