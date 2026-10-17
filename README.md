@@ -55,6 +55,10 @@ A grounded Q&A agent (free-form questions through a language model, limited to t
 ## Use it in Tableau
 The model stays in Python; Tableau reads its results from tidy CSV files in `exports/tableau/` (18 tables: scorecard, segment history, forecasts, monitoring, products, topics, cohorts, Amazon results, market series and the data checks). Works in Tableau Desktop, Cloud, Server and Public. See [docs/TABLEAU.md](docs/TABLEAU.md) for how to connect, five starter views, the full data dictionary and a licence note. `validate_data.py` proves the export gives the same suggested actions and probabilities as the dashboard.
 
+## Keeping it up to date
+
+`.github/workflows/refresh-data.yml` runs every day (and on demand from the Actions tab). It rebuilds the market and recent-activity data from SEC, FRED, CPSC and ENERGY STAR, runs `scripts/check_live_data.py`, and commits to `main` only when a source actually changed, which makes Vercel redeploy. A failed check means nothing is published. It never touches the category review data or its forecasts; those need a newer review source (see `docs/TODO.md`). Amazon's segment detail and guidance are still updated by hand each quarter.
+
 ## Run it
 
 ```bash
