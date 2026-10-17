@@ -126,6 +126,30 @@ check("Time-to-peak histograms match their product counts", pk, "holds for every
 check("Reviews before the listed launch date are rare", co["meta"]["report"]["reviews_before_listed_launch_share"] < 0.10,
       f"{co['meta']['report']['reviews_before_listed_launch_share']:.1%} of reviews pre-date the listed launch (counted as launch month)", warn=True)
 
+
+# ---- 8. topic trends, previous-build snapshot, and the page itself
+tp = json.loads((W / "topics.json").read_text())
+rates_ok = all(0 <= v <= 1 and len(s["all"]) == len(tp["meta"]["periods"]) == len(s["neg"]) for s in tp["series"].values() for v in s["all"] + s["neg"])
+check("Topic rates are valid shares for every period", rates_ok, f"{len(tp['series'])} topics x {len(tp['meta']['periods'])} periods")
+weak = [m for m in tp["rises"] + tp["falls"] if abs(m["z"]) < 4 or m["mentions"] < 40 or abs(m["recent"] - m["prior"]) < 0.02]
+check("Only large, clear topic shifts are listed", not weak, f"{len(tp['rises'])} rising, {len(tp['falls'])} fading, each with 40+ mentions, 2+ points and z >= 4")
+prev = json.loads((W / "forecast_prev.json").read_text())
+check("The previous-build snapshot is usable", bool(prev["segments"]) and "meta" in prev, f"{len(prev['segments'])} segments, built {prev['meta'].get('built')}")
+
+import re
+html = (W / "index.html").read_text()
+ids = set(re.findall(r'id="([^"]+)"', html))
+DYNAMIC = {"briefTarget", "briefQuick"}                      # created by the page's own scripts
+used = set()
+for js in W.glob("*.js"):
+    s = js.read_text()
+    used |= set(re.findall(r'\$\("([A-Za-z0-9_-]+)"\)', s)) | set(re.findall(r'getElementById\("([A-Za-z0-9_-]+)"\)', s)) | set(re.findall(r'draw\("([A-Za-z0-9_-]+)"', s))
+missing = sorted(u for u in used if u not in ids and u not in DYNAMIC)
+check("Every element the scripts use exists on the page", not missing, f"{len(used)} elements referenced" if not missing else f"missing: {missing}")
+tabs = re.findall(r'data-tab="([a-z]+)"', html)
+panels = set(re.findall(r'id="tab-([a-z]+)"', html))
+check("Every tab has a panel", all(t_ in panels for t_ in tabs), f"{len(tabs)} tabs in the menu, {len(panels)} panels (the extra one is About the data)")
+
 # ---- freshness (informational)
 fresh = {"category reviews": fc["meta"]["last_month"], "Amazon filings": mk["meta"]["amazon_latest_quarter"], "market data": mk["fred"]["RSNSR"]["dates"][-1]}
 
