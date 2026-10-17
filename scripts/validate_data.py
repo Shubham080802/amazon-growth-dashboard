@@ -107,6 +107,25 @@ check("Product explorer is complete and consistent", len({i["id"] for i in items
       f"{len(items):,} products; review counts in the detail files equal the index ({n_shard:,})")
 check("Product explorer coverage", True, f"{idx['meta']['reviews_covered_share']:.1%} of all reviews belong to a listed product (30+ reviews)")
 
+
+# ---- 7. old vs new products (cohorts)
+co = json.loads((W / "cohorts.json").read_text())
+pcoh = pd.read_csv(D / "product_cohort.csv.gz")
+bad_share = [y["label"] for y in co["by_year"] if abs(sum(v["orders"] for v in y["b"].values()) - 1) > 0.002 or abs(sum(v["sales"] for v in y["b"].values()) - 1) > 0.002]
+check("Product-age shares add up to 100% in every year", not bad_share, f"{len(co['by_year'])} periods checked" if not bad_share else f"off in: {bad_share}")
+counts = pcoh["cy"].value_counts()
+launched_ok = all(int(counts.get(c["year"], 0)) == c["launched"] for c in co["cohorts"])
+check("Every product sits in exactly one launch cohort", launched_ok and int(counts.sum()) == int(pcoh.shape[0]),
+      f"{int((pcoh.cy >= 2012).sum()):,} products in 2012+ cohorts, {int((pcoh.cy == 2011).sum()):,} legacy (before 2012), {int((pcoh.cy == -1).sum()):,} without a usable launch date")
+mono = all(all((b is None or a is None or b >= a - 1e-9) for a, b in zip(c["curve"]["mean"], c["curve"]["mean"][1:])) for c in co["cohorts"])
+check("Cumulative reviews per product never decrease with age", mono, "all cohort curves are non-decreasing")
+order = all((c["first12"]["hit"]["10"] >= c["first12"]["hit"]["50"] >= c["first12"]["hit"]["200"]) for c in co["cohorts"] if c.get("first12"))
+check("Hit rates are ordered (10+ >= 50+ >= 200+ reviews)", order, "holds for every cohort")
+pk = all(sum(c["peak"]["hist"]) == c["peak"]["n"] for c in co["cohorts"] if c.get("peak"))
+check("Time-to-peak histograms match their product counts", pk, "holds for every cohort")
+check("Reviews before the listed launch date are rare", co["meta"]["report"]["reviews_before_listed_launch_share"] < 0.10,
+      f"{co['meta']['report']['reviews_before_listed_launch_share']:.1%} of reviews pre-date the listed launch (counted as launch month)", warn=True)
+
 # ---- freshness (informational)
 fresh = {"category reviews": fc["meta"]["last_month"], "Amazon filings": mk["meta"]["amazon_latest_quarter"], "market data": mk["fred"]["RSNSR"]["dates"][-1]}
 
