@@ -9,3 +9,4 @@ __pycache__/
 # large intermediate files, rebuilt by the scripts (see README)
 data/products_master.csv.gz
 data/reviews_lean.parquet
+data/product_cohort.csv.gz
