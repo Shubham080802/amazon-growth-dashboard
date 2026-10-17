@@ -69,7 +69,15 @@ def main():
         "segments": [s for s in segs.values() if s["series"]],
     }
     path = ROOT / "web" / "forecast.json"
-    path.write_text(json.dumps(out, separators=(",", ":"), allow_nan=False))
+    new_text = json.dumps(out, separators=(",", ":"), allow_nan=False)
+    if path.exists():                                   # keep the previous build so the dashboard can show what changed
+        old_doc = json.loads(path.read_text())
+        a, b = json.loads(new_text), dict(old_doc)
+        for d in (a, b):
+            d["meta"] = {k: v for k, v in d["meta"].items() if k != "built"}
+        if a != b:                                      # an identical rebuild must not overwrite the snapshot
+            (ROOT / "web" / "forecast_prev.json").write_text(path.read_text())
+    path.write_text(new_text)
     n = sum(len(s["series"]) for s in out["segments"])
     print(f"wrote {path} ({path.stat().st_size / 1024:.0f} KB): {len(out['segments'])} segments, {n} forecasts")
 
